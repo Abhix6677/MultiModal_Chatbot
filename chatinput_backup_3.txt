@@ -1,0 +1,82 @@
+Created At: 2026-08-09T04:38:39+05:30
+Completed At: 2026-08-09T04:38:42+05:30
+
+				The command exited with code 0.
+				Output:
+				<truncated 1 lines>
+     className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono transition-all ${\n211:                   mode === 
+\"chat\"\n212:                     ? \"bg-indigo-600 text-white font-semibold shadow-2xs\"\n213:                     : 
+\"text-stone-500 hover:text-stone-800\"\n214:                 }`}\n215:               >\n216:                 
+General\n217:               </button>\n218:               <button\n219:                 type=\"button\"\n220:          
+       onClick={() => setMode(\"code\")}\n221:                 className={`px-2.5 py-0.5 rounded-lg text-[11px] 
+font-mono transition-all ${\n222:                   mode === \"code\"\n223:                     ? \"bg-indigo-600 
+text-white font-semibold shadow-2xs\"\n224:                     : \"text-stone-500 hover:text-stone-800\"\n225:        
+         }`}\n226:               >\n227:                 Code\n228:               </button>\n229:               
+<button\n230:                 type=\"button\"\n231:                 onClick={() => setMode(\"reasoning\")}\n232:       
+          className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono transition-all ${\n233:                   mode 
+=== \"reasoning\"\n234:                     ? \"bg-indigo-600 text-white font-semibold shadow-2xs\"\n235:              
+       : \"text-stone-500 hover:text-stone-800\"\n236:                 }`}\n237:               >\n238:                 
+Reasoning\n239:               </button>\n240:             </div>\n241:           </div>\n242: \n243:           {/* 
+Right Side: Send/Stop Button */}\n244:           <div className=\"flex items-center gap-2 shrink-0 pl-2\">\n245:       
+      <span className=\"text-[10px] text-stone-400 font-mono hidden md:inline\">\n246:               Press Enter 
+?\n247:             </span>\n248:             {isStreaming ? (\n249:               <button\n250:                 
+type=\"button\"\n251:                 onClick={onStopStreaming}\n252:                 className=\"p-2 bg-red-600 
+hover:bg-red-500 text-white rounded-xl transition-all shadow-md shadow-red-600/20\"\n253:                 title=\"Stop 
+generating\"\n254:               >\n255:                 <Square className=\"w-4 h-4 fill-white\" />\n256:             
+  </button>\n257:             ) : (\n258:               <button\n259:                 type=\"button\"\n260:            
+     onClick={handleSubmit}\n261:                 disabled={!input.trim() && !attachedImage}\n262:                 
+className=\"p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white 
+rounded-xl transition-all shadow-md shadow-indigo-600/20 cursor-pointer disabled:cursor-not-allowed\"\n263:            
+     title=\"Send Prompt\"\n264:               >\n265:                 <ArrowUp className=\"w-4 h-4 stroke-[2.5]\" 
+/>\n266:               </button>\n267:             )}\n268:           </div>\n269:         </div>\n270:       
+</div>\n271:     </div>\n272:   );\n273: };\n274: \n275: \nThe above content shows the entire, complete file contents 
+of the requested file.\n"}
+C:\Users\Abhix\.gemini\antigravity\brain\b5d3187d-f322-4001-8acd-67ef19dc3add\.system_generated\logs\transcript_full.js
+onl:713:{"step_index":717,"source":"MODEL","type":"RUN_COMMAND","status":"DONE","exit_code":0,"created_at":"2026-08-08T
+21:45:26Z","content":"Created At: 2026-08-09T03:15:26+05:30\nCompleted At: 2026-08-09T03:15:33+05:30\n\n\t\t\t\tThe 
+command exited with code 0.\n\t\t\t\tOutput:\n\t\t\t\t\r\n  src\\components\\ChatInput.tsx:1:import React, { useState, 
+useRef, useEffect } from \"react\";\r\n  src\\components\\ChatInput.tsx:2:import JSZip from \"jszip\";\r\n  
+src\\components\\ChatInput.tsx:3:import {\r\n> src\\components\\ChatInput.tsx:4:  Send,\r\n  
+src\\components\\ChatInput.tsx:5:  Square,\r\n  src\\components\\ChatInput.tsx:6:  Paperclip,\r\n  
+src\\components\\ChatInput.tsx:7:  Sliders,\r\n  src\\components\\ChatInput.tsx:8:  Sparkles,\r\n  
+src\\components\\ChatInput.tsx:9:  ChevronDown,\r\n  src\\components\\ChatInput.tsx:24:  mimeType: string;\r\n  
+src\\components\\ChatInput.tsx:25:  fileName: string;\r\n  src\\components\\ChatInput.tsx:26:}\r\n  
+src\\components\\ChatInput.tsx:27:\r\n  src\\components\\ChatInput.tsx:28:interface ChatInputProps {\r\n> 
+src\\components\\ChatInput.tsx:29:  onSendMessage: (\r\n  src\\components\\ChatInput.tsx:30:    text: string, \r\n  
+src\\components\\ChatInput.tsx:31:    attachedImage?: AttachedImage | null, \r\n  src\\components\\ChatInput.tsx:32:   
+ mode?: \"chat\" | \"code\" | \"reasoning\", \r\n  src\\components\\ChatInput.tsx:33:    attachedZipContent?: string | 
+null, \r\n  src\\components\\ChatInput.tsx:34:    zipFileName?: string | null\r\n  src\\components\\ChatInput.tsx:39:  
+hasMessages: boolean;\r\n  src\\components\\ChatInput.tsx:40:  modelName: string;\r\n  
+src\\components\\ChatInput.tsx:41:}\r\n  src\\components\\ChatInput.tsx:42:\r\n  
+src\\components\\ChatInput.tsx:43:export const ChatInput: React.FC<ChatInputProps> = ({\r\n> 
+src\\components\\ChatInput.tsx:44:  onSendMessage,\r\n  src\\components\\ChatInput.tsx:45:  isStreaming,\r\n  
+src\\components\\ChatInput.tsx:46:  onStopStreaming,\r\n  src\\components\\ChatInput.tsx:47:  onOpenConfig,\r\n  
+src\\components\\ChatInput.tsx:48:  hasMessages,\r\n  src\\components\\ChatInput.tsx:49:  modelName,\r\n  
+src\\components\\ChatInput.tsx:220:  };\r\n  src\\components\\ChatInput.tsx:221:\r\n  
+src\\components\\ChatInput.tsx:222:  const handleSubmit = () => {\r\n  src\\components\\ChatInput.tsx:223:    if 
+((!input.trim() && !attachedImage && !attachedZipContent) || isStreaming) \r\nreturn;\r\n  
+src\\components\\ChatInput.tsx:224:    \r\n> src\\components\\ChatInput.tsx:225:    onSendMessage(input.trim(), 
+attachedImage, mode, attachedZipContent, \r\nzipFileName);\r\n  src\\components\\ChatInput.tsx:226:    \r\n  
+src\\components\\ChatInput.tsx:227:    setInput(\"\");\r\n  src\\components\\ChatInput.tsx:228:    
+setAttachedImage(null);\r\n  src\\components\\ChatInput.tsx:229:    setAttachedZipContent(null);\r\n  
+src\\components\\ChatInput.tsx:230:    setZipFileName(null);\r\n  src\\components\\ChatInput.tsx:418:                
+Reasoning\r\n  src\\components\\ChatInput.tsx:419:              </button>\r\n  src\\components\\ChatInput.tsx:420:     
+       </div>\r\n  src\\components\\ChatInput.tsx:421:          </div>\r\n  src\\components\\ChatInput.tsx:422:\r\n> 
+src\\components\\ChatInput.tsx:423:          {/* Right Side: Send/Stop Button */}\r\n  
+src\\components\\ChatInput.tsx:424:          <div className=\"flex items-center gap-2 shrink-0 pl-2\">\r\n  
+src\\components\\ChatInput.tsx:425:            <span className=\"text-[10px] text-[#A7AFBC] hover:text-[#F1F3F7] 
+\r\nfont-mono hidden md:inline\">\r\n  src\\components\\ChatInput.tsx:426:              Press Enter ?\r\n  
+src\\components\\ChatInput.tsx:427:            </span>\r\n  src\\components\\ChatInput.tsx:428:            
+{isStreaming ? (\r\n  src\\components\\ChatInput.tsx:438:              <button\r\n  
+src\\components\\ChatInput.tsx:439:                type=\"button\"\r\n  src\\components\\ChatInput.tsx:440:            
+    onClick={handleSubmit}\r\n  src\\components\\ChatInput.tsx:441:                disabled={(!input.trim() && 
+!attachedImage && !attachedZipContent) \r\n|| isProcessing}\r\n  src\\components\\ChatInput.tsx:442:                
+className=\"p-2 bg-app-primary hover:bg-indigo-500 \r\ndisabled:opacity-100 disabled:bg-[#151923] 
+disabled:text-[#707887] disabled:border disabled:border-[#252B35] \r\ndisabled:shadow-none text-white rounded-xl 
+transition-all shadow-md shadow-indigo-600/20 cursor-pointer \r\ndisabled:cursor-not-allowed\"\r\n> 
+src\\components\\ChatInput.tsx:443:                title=\"Send Prompt\"\r\n  src\\components\\ChatInput.tsx:444:      
+        >\r\n  src\\components\\ChatInput.tsx:445:                <ArrowUp className=\"w-4 h-4 stroke-[2.5]\" />\r\n  
+src\\components\\ChatInput.tsx:446:              </button>\r\n  src\\components\\ChatInput.tsx:447:            )}\r\n  
+src\\components\\ChatInput.tsx:448:          </div>\r\n\r\n\n"}
+
+

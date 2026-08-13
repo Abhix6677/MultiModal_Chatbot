@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+@theme {
+  --color-app-bg: var(--bg);
+  --color-app-fg: var(--fg);
+  --color-app-card: var(--card);
+  --color-app-surface: var(--surface);
+  --color-app-surface-hover: var(--surface-hover);
+  --color-app-surface-active: var(--surface-active);
+  --color-app-border: var(--border);
+  --color-app-border-hover: var(--border-hover);
+  --color-app-primary: var(--primary);
+  --color-app-primary-hover: var(--primary-hover);
+  --color-app-text-primary: var(--text-primary);
+  --color-app-text-secondary: var(--text-secondary);
+  --color-app-muted: var(--muted);
+  --color-app-text-disabled: var(--text-disabled);
+  --color-app-sidebar: var(--sidebar);
+  
+  --color-app-user-bg: var(--user-bg);
+  --color-app-user-fg: var(--user-fg);
+  --color-app-assistant-bg: var(--assistant-bg);
+
+  --color-app-input-bg: var(--input-bg);
+  --color-app-input-text: var(--input-text);
+  --color-app-input-placeholder: var(--input-placeholder);
+}
+
+.bg-app-user-bg {
+  background: var(--user-bg);
+}
+
+:root {
+  --bg: #F7F8FC;
+  --sidebar: #F1F3F8;
+  --card: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-hover: #F8FAFC;
+  --surface-active: #F1F5F9;
+
+  --border: #E5E7EB;
+  --border-hover: #D1D5DB;
+
+  --fg: #171717;
+  --text-primary: #171717;
+  --text-secondary: #4B5563;
+  --muted: #6B7280;
+  --text-disabled: #9CA3AF;
+
+  --primary: #635BFF;
+  --primary-hover: #4F46E5;
+
+  --user-bg: #635BFF;
+  --user-fg: #FFFFFF;
+  
+  --assistant-bg: #FFFFFF;
+  
+  --input-bg: #FFFFFF;
+  --input-text: #171717;
+  --input-placeholder: #9CA3AF;
+  
+  --inline-code-bg: #F1F5F9;
+  --inline-code-text: #4F46E5;
+  --inline-code-border: #E2E8F0;
+}
+
+.dark {
+  --bg: #0B0D12;
+  --sidebar: #10131A;
+  --card: #151923;
+  --surface: #151923;
+  --surface-hover: #1B2027;
+  --surface-active: #202532;
+
+  --border: #252B35;
+  --border-hover: #343B47;
+
+  --fg: #F1F3F7;
+  --text-primary: #F1F3F7;
+  --text-secondary: #B4BBC7;
+  --muted: #8A93A1;
+  --text-disabled: #626B79;
+
+  --primary: #7566F6;
+  --primary-hover: #8274FF;
+
+  --user-bg: #5548B8;
+  --user-fg: #FFFFFF;
+  
+  --assistant-bg: #151923;
+  
+  --input-bg: #151923;
+  --input-text: #F1F3F7;
+  --input-placeholder: #9FA8B7;
+
+  --inline-code-bg: #242936;
+  --inline-code-text: #D8D2FF;
+  --inline-code-border: #343B4A;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+*:focus-visible:not(.no-focus-ring) {
+  outline: 2px solid rgba(117, 102, 246, 0.55) !important;
+  outline-offset: 2px !important;
+}
+
+::selection {
+  background-color: rgba(99, 102, 241, 0.4) !important;
+  color: inherit !important;
+}
+
+.dark ::selection {
+  background-color: rgba(99, 102, 241, 0.5) !important;
+  color: #ffffff !important;
+}
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+}

@@ -1,0 +1,56 @@
+Created At: 2026-08-09T04:37:48+05:30
+Completed At: 2026-08-09T04:37:51+05:30
+
+				The command exited with code 0.
+				Output:
+				import React, { useState, useRef, useEffect } from "react";
+import JSZip from "jszip";
+import {
+  Send,
+  Square,
+  Paperclip,
+  Sliders,
+  Sparkles,
+  ChevronDown,
+  Brain,
+  ArrowUp,
+  Cpu,
+  Layers,
+  X,
+  Image as ImageIcon,
+  Eye,
+  FileArchive,
+  FolderPlus,
+  Loader2,
+} from "lucide-react";
+
+export interface AttachedImage {
+  dataUrl: string;
+  mimeType: string;
+  fileName: string;
+}
+
+interface ChatInputProps {
+  onSendMessage: (
+    text: string, 
+    attachedImage?: AttachedImage | null, 
+    mode?: "chat" | "code" | "reasoning", 
+    attachedZipContent?: string | null, 
+    zipFileName?: string | null
+  ) => void;
+  isStreaming: boolean;
+  onStopStreaming: () => void;
+  onOpenConfig: () => void;
+  hasMessages: boolean;
+  modelName: string;
+}
+
+export const ChatInput: React.FC<ChatInputProps> = ({
+  quotedText,
+  onClearQuote,
+  onSendMessage,
+  isStreaming,
+  onStopStreaming,
+  onOpenConfig,
+  hasMessages,
+

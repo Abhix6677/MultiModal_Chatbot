@@ -1,0 +1,284 @@
+Created At: 2026-08-08T20:08:36+05:30
+Completed At: 2026-08-08T20:08:37+05:30
+File Path: `file:///c:/Users/Abhix/Desktop/MY%20Project/Chatbot/universal-chatbot/src/components/ChatInput.tsx`
+Total Lines: 275
+Total Bytes: 9751
+Showing lines 1 to 275
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import React, { useState, useRef, useEffect } from "react";
+2: import {
+3:   Send,
+4:   Square,
+5:   Paperclip,
+6:   Sliders,
+7:   Sparkles,
+8:   ChevronDown,
+9:   Brain,
+10:   ArrowUp,
+11:   Cpu,
+12:   Layers,
+13:   X,
+14:   Image as ImageIcon,
+15:   Eye,
+16: } from "lucide-react";
+17: 
+18: export interface AttachedImage {
+19:   dataUrl: string;
+20:   mimeType: string;
+21:   fileName: string;
+22: }
+23: 
+24: interface ChatInputProps {
+25:   onSendMessage: (text: string, attachedImage?: AttachedImage | null) => void;
+26:   isStreaming: boolean;
+27:   onStopStreaming: () => void;
+28:   onOpenConfig: () => void;
+29:   hasMessages: boolean;
+30:   modelName: string;
+31: }
+32: 
+33: export const ChatInput: React.FC<ChatInputProps> = ({
+34:   onSendMessage,
+35:   isStreaming,
+36:   onStopStreaming,
+37:   onOpenConfig,
+38:   hasMessages,
+39:   modelName,
+40: }) => {
+41:   const [input, setInput] = useState("");
+42:   const [mode, setMode] = useState<"chat" | "code" | "reasoning">("chat");
+43:   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
+44:   const textareaRef = useRef<HTMLTextAreaElement>(null);
+45:   const fileInputRef = useRef<HTMLInputElement>(null);
+46: 
+47:   useEffect(() => {
+48:     if (textareaRef.current) {
+49:       textareaRef.current.style.height = "auto";
+50:       textareaRef.current.style.height = `${Math.min(
+51:         textareaRef.current.scrollHeight,
+52:         200
+53:       )}px`;
+54:     }
+55:   }, [input]);
+56: 
+57:   const processFile = (file: File) => {
+58:     if (!file.type.startsWith("image/")) {
+59:       alert("Please upload an image file (PNG, JPG, WEBP, etc.)");
+60:       return;
+61:     }
+62:     const reader = new FileReader();
+63:     reader.onload = (e) => {
+64:       if (e.target?.result) {
+65:         setAttachedImage({
+66:           dataUrl: e.target.result as string,
+67:           mimeType: file.type || "image/jpeg",
+68:           fileName: file.name || "Pasted Image",
+69:         });
+70:       }
+71:     };
+72:     reader.readAsDataURL(file);
+73:   };
+74: 
+75:   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+76:     const file = e.target.files?.[0];
+77:     if (file) {
+78:       processFile(file);
+79:     }
+80:     if (fileInputRef.current) {
+81:       fileInputRef.current.value = "";
+82:     }
+83:   };
+84: 
+85:   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+86:     const items = e.clipboardData?.items;
+87:     if (!items) return;
+88:     for (let i = 0; i < items.length; i++) {
+89:       if (items[i].type.indexOf("image") !== -1) {
+90:         const file = items[i].getAsFile();
+91:         if (file) {
+92:           e.preventDefault();
+93:           processFile(file);
+94:           break;
+95:         }
+96:       }
+97:     }
+98:   };
+99: 
+100:   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+101:     if (e.key === "Enter" && !e.shiftKey) {
+102:       e.preventDefault();
+103:       handleSubmit();
+104:     }
+105:   };
+106: 
+107:   const handleSubmit = () => {
+108:     if ((!input.trim() && !attachedImage) || isStreaming) return;
+109:     onSendMessage(input.trim(), attachedImage);
+110:     setInput("");
+111:     setAttachedImage(null);
+112:     if (textareaRef.current) {
+113:       textareaRef.current.style.height = "auto";
+114:     }
+115:   };
+116: 
+117:   return (
+118:     <div className="w-full max-w-3xl mx-auto px-4 pb-4 pt-1">
+119:       {/* Hidden File Input */}
+120:       <input
+121:         type="file"
+122:         ref={fileInputRef}
+123:         accept="image/*"
+124:         onChange={handleFileChange}
+125:         className="hidden"
+126:       />
+127: 
+128:       {/* Floating Prompt Container */}
+129:       <div className="bg-white border border-[#e2dcd0] focus-within:border-indigo-500 rounded-2xl p-3.5 shadow-lg transition-all duration-200">
+130:         {/* Attached Image Preview Pill if present */}
+131:         {attachedImage && (
+132:           <div className="mb-2.5 p-2 bg-indigo-50/80 border border-indigo-200/80 rounded-xl flex items-center justify-between gap-3 animate-fadeIn">
+133:             <div className="flex items-center gap-2.5 overflow-hidden">
+134:               <img
+135:                 src={attachedImage.dataUrl}
+136:                 alt="Attachment Preview"
+137:                 className="w-10 h-10 object-cover rounded-lg border border-indigo-200 shrink-0"
+138:               />
+139:               <div className="min-w-0">
+140:                 <div className="text-xs font-semibold text-stone-900 truncate flex items-center gap-1.5">
+141:                   <ImageIcon className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+142:                   <span className="truncate">{attachedImage.fileName}</span>
+143:                 </div>
+144:                 <div className="text-[10px] text-indigo-700 font-mono flex items-center gap-1 mt-0.5">
+145:                   <Eye className="w-3 h-3 text-indigo-500 shrink-0" />
+146:                   <span>Auto Vision Transcoder: Converts image into text for any model</span>
+147:                 </div>
+148:               </div>
+149:             </div>
+150:             <button
+151:               type="button"
+152:               onClick={() => setAttachedImage(null)}
+153:               className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-lg transition-colors shrink-0"
+154:               title="Remove image"
+155:             >
+156:               <X className="w-4 h-4" />
+157:             </button>
+158:           </div>
+159:         )}
+160: 
+161:         {/* Textarea */}
+162:         <textarea
+163:           ref={textareaRef}
+164:           value={input}
+165:           onChange={(e) => setInput(e.target.value)}
+166:           onKeyDown={handleKeyDown}
+167:           onPaste={handlePaste}
+168:           placeholder={
+169:             attachedImage
+170:               ? "Ask a question about this attached image..."
+171:               : "Ask anything or paste/attach an image..."
+172:           }
+173:           rows={2}
+174:           className="w-full bg-transparent text-sm text-stone-900 placeholder-stone-400 resize-none focus:outline-none min-h-[52px] max-h-48 font-sans leading-relaxed"
+175:         />
+176: 
+177:         {/* Action Controls Toolbar */}
+178:         <div className="flex items-center justify-between pt-2.5 border-t border-[#f0eae0] mt-1 select-none">
+179:           {/* Left Side: Attachment, Model Selector, Mode Pills */}
+180:           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
+181:             <button
+182:               type="button"
+183:               onClick={() => fileInputRef.current?.click()}
+184:               className={`p-1.5 rounded-lg transition-colors shrink-0 flex items-center gap-1 ${
+185:                 attachedImage
+186:                   ? "text-indigo-600 bg-indigo-100/80 font-medium"
+187:                   : "text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+188:               }`}
+189:               title="Attach Image or Screenshot (Paste Ctrl+V supported)"
+190:             >
+191:               <Paperclip className="w-4 h-4" />
+192:               {attachedImage && <span className="text-[10px] font-mono">1 Image</span>}
+193:             </button>
+194: 
+195:             {/* Model Badge */}
+196:             <button
+197:               type="button"
+198:               onClick={onOpenConfig}
+199:               className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-700 hover:text-stone-900 rounded-xl text-xs font-mono flex items-center gap-1.5 transition-colors shrink-0 border border-stone-200"
+200:             >
+201:               <Cpu className="w-3.5 h-3.5 text-indigo-600" />
+202:               <span className="truncate max-w-[150px] font-semibold">{modelName || "custom-model"}</span>
+203:             </button>
+204: 
+205:             {/* Mode Pills */}
+206:             <div className="hidden sm:flex items-center gap-1 bg-stone-100/80 p-0.5 rounded-xl border border-stone-200 shrink-0">
+207:               <button
+208:                 type="button"
+209:                 onClick={() => setMode("chat")}
+210:                 className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono transition-all ${
+211:                   mode === "chat"
+212:                     ? "bg-indigo-600 text-white font-semibold shadow-2xs"
+213:                     : "text-stone-500 hover:text-stone-800"
+214:                 }`}
+215:               >
+216:                 General
+217:               </button>
+218:               <button
+219:                 type="button"
+220:                 onClick={() => setMode("code")}
+221:                 className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono transition-all ${
+222:                   mode === "code"
+223:                     ? "bg-indigo-600 text-white font-semibold shadow-2xs"
+224:                     : "text-stone-500 hover:text-stone-800"
+225:                 }`}
+226:               >
+227:                 Code
+228:               </button>
+229:               <button
+230:                 type="button"
+231:                 onClick={() => setMode("reasoning")}
+232:                 className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono transition-all ${
+233:                   mode === "reasoning"
+234:                     ? "bg-indigo-600 text-white font-semibold shadow-2xs"
+235:                     : "text-stone-500 hover:text-stone-800"
+236:                 }`}
+237:               >
+238:                 Reasoning
+239:               </button>
+240:             </div>
+241:           </div>
+242: 
+243:           {/* Right Side: Send/Stop Button */}
+244:           <div className="flex items-center gap-2 shrink-0 pl-2">
+245:             <span className="text-[10px] text-stone-400 font-mono hidden md:inline">
+246:               Press Enter ↵
+247:             </span>
+248:             {isStreaming ? (
+249:               <button
+250:                 type="button"
+251:                 onClick={onStopStreaming}
+252:                 className="p-2 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all shadow-md shadow-red-600/20"
+253:                 title="Stop generating"
+254:               >
+255:                 <Square className="w-4 h-4 fill-white" />
+256:               </button>
+257:             ) : (
+258:               <button
+259:                 type="button"
+260:                 onClick={handleSubmit}
+261:                 disabled={!input.trim() && !attachedImage}
+262:                 className="p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white rounded-xl transition-all shadow-md shadow-indigo-600/20 cursor-pointer disabled:cursor-not-allowed"
+263:                 title="Send Prompt"
+264:               >
+265:                 <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+266:               </button>
+267:             )}
+268:           </div>
+269:         </div>
+270:       </div>
+271:     </div>
+272:   );
+273: };
+274: 
+275: 
+The above content shows the entire, complete file contents of the requested file.
+

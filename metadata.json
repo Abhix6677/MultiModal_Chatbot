@@ -1,0 +1,6 @@
+{
+  "name": "Universal Chatbot",
+  "description": "A complete AI chatbot supporting custom API keys, Base URLs, and model providers with streaming, chat history, and custom presets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
