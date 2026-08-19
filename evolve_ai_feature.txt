@@ -1,0 +1,26 @@
+# Evolve AI - Universal Chatbot Feature
+
+## Evolve AI Kya Hai?
+Evolve AI tumhare chatbot ka ek smart "Background Brain" hai. Normal chatbots mein agar tumhe bot ka baat karne ka tareeqa pasand nahi aata (jaise wo bahut lamba bolta hai, ya emojis use nahi karta), toh tumhe baar-baar prompt mein bolna padta hai ya settings mein jaakar lambe "Custom Instructions" likhne padte hain. 
+Evolve AI is problem ko solve karta hai. Yeh khud tumhari pichli chats ko padhta hai, tumhari pasand samajhta hai, aur apne aapko humesha ke liye tumhare style ke hisaab se dhal leta hai.
+
+## Tumhare Chatbot Mein Yeh Kaise Kaam Karta Hai?
+
+1. **Chats Ko Observe Karna (Background Tracking)**
+Tum jaise-jaise chatbot se baat karte ho, frontend (App.tsx) track karta hai ki tum kitne messages bhej chuke ho. Har 6 messages ke baad, bina tumhare chat ko disturb kiye, background mein ek process start hota hai. Tum chaho toh UI mein diye gaye **"Evolve AI"** button (top right) par click karke isey manually bhi start kar sakte ho.
+
+2. **Recent History Ko Collect Karna**
+Evolve AI tumhari pichli 5 alag-alag conversations uthata hai (har chat ke aakhri 10 messages). Yeh dekhta hai ki:
+- Tumne bot ko kahan daanta ya correct kiya (e.g., "Mera naam Abhix hai, bhool gaye?").
+- Tumhe kis tarah ke answers pasand aate hain (e.g., direct answers, Hinglish, casual tone).
+- Kya bot aisi koi galti kar raha hai jo tumhe pasand nahi?
+
+3. **Shadow Evaluator (The Hidden AI)**
+Tumhare messages ko ek doosre chhote aur fast AI (jaise Mistral ya Gemini Flash) ke paas `/api/shadow-evaluate` endpoint ke through bheja jata hai. Yeh "Evaluator AI" sirf ek judge ki tarah kaam karta hai. Uska kaam tumhare sawalon ka jawaab dena nahi hai, balki main chatbot ki galtiyan nikalna aur rules banana hai.
+
+4. **Rules Generate Karna**
+Evaluator AI ek naya set of rules banata hai (e.g., "Hamesha Hinglish mein baat karo", "User ka naam Abhix hai, yaad rakho", "Short bullet points use karo"). Agar chats mein kuch naya nahi mila, toh wo chup-chaap "NO_CHANGE" bolkar ruk jata hai taaki faaltu rules na banein.
+
+5. **Chatbot Ka "Evolve" Hona**
+Jaise hi naye rules bante hain, tumhara chatbot un rules ko apne core System Prompt (`globalSystemRules`) mein daal leta hai. 
+Iska sabse bada fayda yeh hai ki chahe tum koi bhi AI model use kar rahe ho (OpenAI, Qwen, Llama, DeepSeek), woh sab ke sab in rules ko follow karenge. Tumhara bot ab next level par evolve ho chuka hai, aur usne tumhari preferences seekh li hain bina tumhare explicitly bataye!

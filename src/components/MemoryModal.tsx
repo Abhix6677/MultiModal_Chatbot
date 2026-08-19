@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Brain, RefreshCw, Trash2, CheckCircle2, Sparkles } from "lucide-react";
 import { Conversation, ApiConfig } from "../types";
 import { updateConversationMemoryIfNeeded } from "../utils/memory";
@@ -7,7 +7,8 @@ interface MemoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   conversation: Conversation;
-  onUpdateMemory: (newMemory: string) => void;
+  onUpdateMemory: (newMemory: string, newIndex?: number) => void;
+  onForceEvolve?: () => void;
   config: ApiConfig;
 }
 
@@ -16,10 +17,25 @@ export const MemoryModal: React.FC<MemoryModalProps> = ({
   onClose,
   conversation,
   onUpdateMemory,
+  onForceEvolve,
   config,
 }) => {
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [memoryText, setMemoryText] = useState(conversation.longTermMemory || "");
+
+  useEffect(() => {
+    if (isOpen) {
+      setMemoryText(conversation.longTermMemory || "");
+    }
+  }, [conversation.longTermMemory, isOpen]);
+
+  const totalMessages = conversation.messages.length;
+  const backedUpMessages = Math.min(
+    (conversation.lastSummarizedMessageIndex !== undefined && conversation.lastSummarizedMessageIndex > -1)
+      ? conversation.lastSummarizedMessageIndex + 1
+      : 0,
+    totalMessages
+  );
 
   if (!isOpen) return null;
 
@@ -28,7 +44,10 @@ export const MemoryModal: React.FC<MemoryModalProps> = ({
     const newMemory = await updateConversationMemoryIfNeeded(conversation, config, true);
     if (newMemory) {
       setMemoryText(newMemory);
-      onUpdateMemory(newMemory);
+      onUpdateMemory(newMemory, conversation.messages.length - 1);
+    }
+    if (onForceEvolve) {
+      onForceEvolve();
     }
     setIsSummarizing(false);
   };
@@ -50,7 +69,7 @@ export const MemoryModal: React.FC<MemoryModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-app-border bg-app-surface">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-app-primary text-white flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-app-primary text-white dark:text-stone-900 flex items-center justify-center shadow-sm">
               <Brain className="w-4 h-4" />
             </div>
             <div>
@@ -95,36 +114,47 @@ export const MemoryModal: React.FC<MemoryModalProps> = ({
             />
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center justify-between pt-2">
-            <button
-              type="button"
-              onClick={handleManualSummarize}
-              disabled={isSummarizing || conversation.messages.length === 0}
-              className="px-3.5 py-2 bg-app-surface hover:bg-app-surface-hover text-app-fg text-xs font-mono rounded-xl flex items-center gap-2 transition-colors disabled:opacity-50 border border-app-border cursor-pointer disabled:cursor-not-allowed"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSummarizing ? "animate-spin" : ""}`} />
-              {isSummarizing ? "Extracting..." : "Force Self-Reflection (Learn Rules)"}
-            </button>
+          {/* Status and Action buttons */}
+          <div className="flex flex-col gap-3 pt-2">
+            <div className="flex items-center justify-between px-1">
+              <div className="text-[11px] font-mono text-app-text-secondary flex items-center gap-2">
+                <span className="px-2 py-0.5 bg-app-surface-active border border-app-border rounded-md font-bold text-app-fg">
+                  {backedUpMessages}/{totalMessages}
+                </span>
+                <span>Messages fully condensed &amp; stored</span>
+              </div>
+            </div>
 
-            <div className="flex gap-2">
+            <div className="flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => {
-                  setMemoryText("");
-                  onUpdateMemory("");
-                }}
-                className="px-3.5 py-2 text-[#A7AFBC] hover:text-red-400 hover:bg-red-500/10 text-xs font-medium rounded-xl transition-colors"
+                onClick={handleManualSummarize}
+                disabled={isSummarizing || conversation.messages.length === 0}
+                className="px-3.5 py-2 bg-app-surface hover:bg-app-surface-hover text-app-fg text-xs font-mono rounded-xl flex items-center gap-2 transition-colors disabled:opacity-50 border border-app-border cursor-pointer disabled:cursor-not-allowed"
               >
-                Clear Memory
+                <RefreshCw className={`w-3.5 h-3.5 ${isSummarizing ? "animate-spin" : ""}`} />
+                {isSummarizing ? "Extracting..." : "Force Self-Reflection (Learn Rules)"}
               </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                className="px-4 py-2 bg-app-primary hover:bg-app-primary-hover text-white text-xs font-semibold rounded-xl transition-all shadow-none hover:shadow-md cursor-pointer"
-              >
-                Save Memory
-              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMemoryText("");
+                    onUpdateMemory("");
+                  }}
+                  className="px-3.5 py-2 text-[#A7AFBC] hover:text-red-400 hover:bg-red-500/10 text-xs font-medium rounded-xl transition-colors"
+                >
+                  Clear Memory
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-app-primary hover:bg-app-primary-hover text-white dark:text-stone-900 text-xs font-semibold rounded-xl transition-all shadow-none hover:shadow-md cursor-pointer"
+                >
+                  Save Memory
+                </button>
+              </div>
             </div>
           </div>
         </div>

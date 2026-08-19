@@ -1,0 +1,19 @@
+backendEvolution.ts(647,3): error TS2322: Type '(EvolutionEvent | { version: number; timestamp: number; action: string; summary: string; evidence: string; })[]' is not assignable to type 'EvolutionEvent[]'.
+  Type 'EvolutionEvent | { version: number; timestamp: number; action: string; summary: string; evidence: string; }' is not assignable to type 'EvolutionEvent'.
+    Type '{ version: number; timestamp: number; action: string; summary: string; evidence: string; }' is not assignable to type 'EvolutionEvent'.
+      Types of property 'action' are incompatible.
+        Type 'string' is not assignable to type 'EvolutionAction'.
+src/App.tsx(41,40): error TS2304: Cannot find name 'ApiConfig'.
+src/App.tsx(59,54): error TS2304: Cannot find name 'Conversation'.
+src/App.tsx(90,43): error TS2304: Cannot find name 'Conversation'.
+src/App.tsx(100,28): error TS2304: Cannot find name 'Conversation'.
+src/App.tsx(185,20): error TS2304: Cannot find name 'Conversation'.
+src/App.tsx(203,29): error TS2304: Cannot find name 'Conversation'.
+src/App.tsx(231,24): error TS2304: Cannot find name 'Conversation'.
+src/App.tsx(244,48): error TS2304: Cannot find name 'Conversation'.
+src/App.tsx(251,54): error TS2304: Cannot find name 'ProviderType'.
+src/App.tsx(469,95): error TS2345: Argument of type 'string' is not assignable to parameter of type 'AttachedFile[]'.
+src/App.tsx(573,35): error TS2304: Cannot find name 'Conversation'.
+src/App.tsx(583,30): error TS2345: Argument of type '{ memory: string; lastSummarizedIndex: number; globalMemory?: string; }' is not assignable to parameter of type 'string'.
+src/utils/memory.ts(138,36): error TS2322: Type 'string | any[]' is not assignable to type 'string'.
+  Type 'any[]' is not assignable to type 'string'.

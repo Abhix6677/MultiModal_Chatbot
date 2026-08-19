@@ -34,7 +34,11 @@ export interface ApiConfig {
   theme?: "light" | "dark" | "system";
   webSearch?: boolean;
   globalSystemRules?: string;
+  /** Persistent global user profile: name, language, preferences, projects.
+   *  Extracted from any conversation and injected into ALL chats system prompt. */
+  globalUserProfile?: string;
 }
+
 
 export interface AttachedFile {
   id: string;
@@ -66,8 +70,14 @@ export interface Conversation {
   title: string;
   createdAt: number;
   updatedAt: number;
+  pinned?: boolean;
   messages: ChatMessage[];
   config: ApiConfig;
   longTermMemory?: string;
   firstChatDate?: string;
+  /** Index of the last message that has been summarized into longTermMemory. 
+   *  0 = nothing summarized yet (next run starts from Day 1).
+   *  Used for incremental delta extraction — only unseen messages are sent each time. */
+  lastSummarizedMessageIndex?: number;
 }
+

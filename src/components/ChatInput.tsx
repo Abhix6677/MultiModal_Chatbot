@@ -1,13 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Send,
   Square,
   Paperclip,
-  Sliders,
-  Sparkles,
-  ChevronDown,
-  Brain,
-  ArrowUp,
   Cpu,
   Layers,
   X,
@@ -16,6 +10,8 @@ import {
   Archive,
   FileText,
   Globe,
+  ArrowUp,
+  Brain,
 } from "lucide-react";
 import JSZip from "jszip";
 import { AttachedFile } from "../types";
@@ -48,7 +44,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"chat" | "code" | "reasoning">("chat");
-  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(true);
+  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -205,8 +201,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 pb-4 pt-1">
-      {/* Hidden File Input */}
+    <div className="w-full max-w-3xl mx-auto px-4 pb-0">
       <input
         type="file"
         ref={fileInputRef}
@@ -214,81 +209,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onChange={handleFileChange}
         className="hidden"
       />
-      <div className="bg-app-card border border-app-primary ring-1 ring-app-primary rounded-2xl p-3.5 shadow-lg transition-all duration-200">
-        
-        {/* Attached Files Preview */}
-        {attachedFiles.length > 0 && (
-          <div className="mb-2.5 flex flex-wrap gap-2 animate-fadeIn">
-            {attachedFiles.map((file) => (
-              <div key={file.id} className="p-2 bg-indigo-50/80 border border-indigo-200/80 rounded-xl flex items-center justify-between gap-3 min-w-[200px] max-w-xs">
-                <div className="flex items-center gap-2.5 overflow-hidden">
-                  {file.type === "image" ? (
-                    <img
-                      src={file.dataUrl}
-                      alt="Attachment Preview"
-                      className="w-10 h-10 object-cover rounded-lg border border-indigo-200 shrink-0"
-                    />
-                  ) : file.type === "zip" ? (
-                    <div className="w-10 h-10 bg-indigo-100/50 rounded-lg border border-indigo-200 shrink-0 flex items-center justify-center">
-                      <Archive className="w-5 h-5 text-indigo-600" />
-                    </div>
-                  ) : (
-                    <div className="w-10 h-10 bg-indigo-100/50 rounded-lg border border-indigo-200 shrink-0 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-indigo-600" />
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold text-stone-900 truncate flex items-center gap-1.5">
-                      {file.type === "image" && <ImageIcon className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
-                      {file.type === "zip" && <Archive className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
-                      {file.type === "text" && <FileText className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
-                      <span className="truncate">{file.fileName}</span>
-                    </div>
-                    <div className="text-[10px] text-indigo-700 font-mono flex items-center gap-1 mt-0.5">
-                      {file.type === "image" && (
-                        <>
-                          <Eye className="w-3 h-3 text-indigo-500 shrink-0" />
-                          <span>Vision Transcoder</span>
-                        </>
-                      )}
-                      {file.type === "zip" && (
-                        <>
-                          <Layers className="w-3 h-3 text-indigo-500 shrink-0" />
-                          <span>Zip Workspace</span>
-                        </>
-                      )}
-                      {file.type === "text" && (
-                        <>
-                          <FileText className="w-3 h-3 text-indigo-500 shrink-0" />
-                          <span>Text Context</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeFile(file.id)}
-                  className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-lg transition-colors shrink-0"
-                  title="Remove file"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Quoted Text Pill */}
+      <div className="relative flex w-full flex-col gap-4">
         {quotedText && (
-          <div className="mb-2.5 p-2 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/30 rounded-xl flex items-center justify-between gap-3 animate-fadeIn">
+          <div className="mb-2.5 p-2 bg-accent border rounded-xl flex items-center justify-between gap-3 animate-fadeIn">
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-1.5 h-8 bg-indigo-400 rounded-full shrink-0"></div>
+              <div className="w-1 h-8 bg-primary rounded-full shrink-0"></div>
               <div className="min-w-0">
-                <div className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mb-0.5">
+                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">
                   Replying to
                 </div>
-                <div className="text-xs text-app-fg truncate max-w-[200px] sm:max-w-md italic">
+                <div className="text-xs text-foreground truncate max-w-[200px] sm:max-w-md italic">
                   "{quotedText}"
                 </div>
               </div>
@@ -296,7 +226,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={onClearQuote}
-              className="p-1.5 text-app-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors shrink-0"
+              className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors shrink-0"
               title="Remove Quote"
             >
               <X className="w-4 h-4" />
@@ -304,125 +234,139 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </div>
         )}
 
-        {/* Textarea */}
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={
-            attachedFiles.length > 0
-              ? `Ask a question about the ${attachedFiles.length} attached file(s)...`
-              : "Ask anything or paste/attach files (images, zips, text)..."
-          }
-          rows={1}
-          className="w-full no-focus-ring bg-transparent border-none outline-none shadow-none ring-0 focus:ring-0 focus:border-none focus:outline-none text-sm text-app-fg placeholder-app-input-placeholder resize-none min-h-[24px] max-h-48 font-sans leading-normal py-1"
-        />
+        <div className="relative rounded-2xl border bg-card shadow-sm transition-shadow duration-300 focus-within:shadow-md focus-within:ring-1 focus-within:ring-ring/50">
+          {attachedFiles.length > 0 && (
+            <div className="flex w-full self-start flex-row gap-2 overflow-x-auto px-4 pt-4 no-scrollbar">
+              {attachedFiles.map((file) => (
+                <div key={file.id} className="relative group shrink-0 w-16 h-16 rounded-xl border bg-accent/50 flex items-center justify-center overflow-hidden">
+                  {file.type === "image" ? (
+                    <img
+                      src={file.dataUrl}
+                      alt="Attachment Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : file.type === "zip" ? (
+                    <Archive className="w-6 h-6 text-muted-foreground" />
+                  ) : (
+                    <FileText className="w-6 h-6 text-muted-foreground" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeFile(file.id)}
+                    className="absolute -top-1 -right-1 p-1 bg-background/80 hover:bg-destructive hover:text-destructive-foreground rounded-full text-foreground opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm shadow-sm"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
-        {/* Action Controls Toolbar */}
-        <div className="flex items-center justify-between pt-1 mt-1 select-none">
-          {/* Left Side: Attachment, Model Selector, Mode Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5">
-            <button
-              type="button"
-              onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)}
-              className={`p-1.5 rounded-lg transition-colors shrink-0 flex items-center gap-1 ${
-                isWebSearchEnabled
-                  ? "text-blue-500 bg-blue-500/10 font-medium"
-                  : "text-stone-500 dark:text-[#B4BBC7] hover:text-stone-900 dark:hover:text-[#F1F3F7] hover:bg-app-surface-hover"
-              }`}
-              title={isWebSearchEnabled ? "Web Search Enabled (Will browse the internet)" : "Enable Web Search"}
-            >
-              <Globe className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={`p-1.5 rounded-lg transition-colors shrink-0 flex items-center gap-1 ${
-                attachedFiles.length > 0
-                  ? "text-app-primary bg-app-primary/10 font-medium"
-                  : "text-stone-500 dark:text-[#B4BBC7] hover:text-stone-900 dark:hover:text-[#F1F3F7] hover:bg-app-surface-hover"
-              }`}
-              title="Attach Files (Images, Zips, Docs)"
-            >
-              <Paperclip className="w-4 h-4" />
-              {attachedFiles.length > 0 && <span className="text-[10px] font-mono">{attachedFiles.length} File(s)</span>}
-            </button>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={
+              attachedFiles.length > 0
+                ? `Ask a question about the ${attachedFiles.length} attached file(s)...`
+                : "Ask anything..."
+            }
+            rows={1}
+            className="w-full min-h-[64px] max-h-48 resize-none bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 border-none"
+          />
 
-            {/* Model Badge */}
-            <button
-              type="button"
-              onClick={onOpenConfig}
-              className="px-2.5 py-1 bg-app-surface hover:bg-app-surface-hover text-stone-500 dark:text-[#B4BBC7] hover:text-stone-900 dark:hover:text-[#F1F3F7] rounded-xl text-xs font-mono flex items-center gap-1.5 transition-colors shrink-0 border border-app-border shadow-2xs"
-            >
-              <Cpu className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="truncate max-w-[150px] font-semibold">{modelName || "custom-model"}</span>
-            </button>
-
-            {/* Mode Pills */}
-            <div className="hidden sm:flex items-center gap-1 bg-app-surface p-0.5 rounded-xl border border-app-border shrink-0 shadow-2xs">
+          <div className="flex items-center justify-between px-3 pb-3">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => setMode("chat")}
-                className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono transition-all ${
-                  mode === "chat"
-                    ? "bg-app-primary text-white font-semibold shadow-2xs"
-                    : "text-stone-500 dark:text-[#B4BBC7] hover:text-stone-900 dark:hover:text-[#F1F3F7]"
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-1.5 rounded-lg border transition-colors shrink-0 flex items-center gap-1 ${
+                  attachedFiles.length > 0
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:border-border hover:bg-accent hover:text-foreground"
                 }`}
+                title="Attach Files"
               >
-                General
+                <Paperclip className="w-4 h-4" />
               </button>
+
               <button
                 type="button"
-                onClick={() => setMode("code")}
-                className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono transition-all ${
-                  mode === "code"
-                    ? "bg-app-primary text-white font-semibold shadow-2xs"
-                    : "text-stone-500 dark:text-[#B4BBC7] hover:text-stone-900 dark:hover:text-[#F1F3F7]"
+                onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)}
+                className={`p-1.5 rounded-lg border transition-colors shrink-0 flex items-center gap-1 ${
+                  isWebSearchEnabled
+                    ? "border-blue-500 text-blue-500"
+                    : "border-transparent text-muted-foreground hover:border-border hover:bg-accent hover:text-foreground"
                 }`}
+                title={isWebSearchEnabled ? "Web Search Enabled" : "Enable Web Search"}
               >
-                Code
+                <Globe className="w-4 h-4" />
               </button>
+
+              <div className="hidden sm:flex ml-1 items-center gap-0.5 bg-accent/50 p-0.5 rounded-lg border">
+                <button
+                  type="button"
+                  onClick={() => setMode("chat")}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    mode === "chat" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  General
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("code")}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    mode === "code" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Code
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("reasoning")}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    mode === "reasoning" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Reason
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setMode("reasoning")}
-                className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono transition-all ${
-                  mode === "reasoning"
-                    ? "bg-app-primary text-white font-semibold shadow-2xs"
-                    : "text-stone-500 dark:text-[#B4BBC7] hover:text-stone-900 dark:hover:text-[#F1F3F7]"
-                }`}
+                onClick={onOpenConfig}
+                className="ml-1 px-2.5 py-1.5 bg-accent/30 hover:bg-accent border text-muted-foreground hover:text-foreground rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition-colors shrink-0"
               >
-                Reasoning
+                <Cpu className="w-3.5 h-3.5" />
+                <span className="truncate max-w-[120px]">{modelName || "custom-model"}</span>
               </button>
             </div>
-          </div>
 
-          {/* Right Side: Send/Stop Button */}
-          <div className="flex items-center gap-2 shrink-0 pl-2">
-            <span className="text-[10px] text-app-muted font-mono hidden md:inline hover:text-app-fg transition-colors cursor-default">
-              Press Enter ↵
-            </span>
-            {isStreaming ? (
-              <button
-                type="button"
-                onClick={onStopStreaming}
-                className="p-2 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all shadow-md shadow-red-600/20"
-                title="Stop generating"
-              >
-                <Square className="w-4 h-4 fill-white" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!input.trim() && attachedFiles.length === 0}
-                className="p-2 bg-app-primary hover:bg-indigo-500 disabled:opacity-100 disabled:bg-stone-100 dark:disabled:bg-[#151923] disabled:text-stone-400 dark:disabled:text-[#707887] disabled:border disabled:border-stone-200 dark:disabled:border-[#252B35] disabled:shadow-none text-white rounded-xl transition-all shadow-md shadow-indigo-600/20 cursor-pointer disabled:cursor-not-allowed"
-                title="Send Prompt"
-              >
-                <ArrowUp className="w-4 h-4 stroke-[2.5]" />
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {isStreaming ? (
+                <button
+                  type="button"
+                  onClick={onStopStreaming}
+                  className="h-8 w-8 flex items-center justify-center bg-foreground text-background hover:opacity-85 active:scale-95 rounded-xl transition-all"
+                  title="Stop generating"
+                >
+                  <Square className="w-3.5 h-3.5 fill-current" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!input.trim() && attachedFiles.length === 0}
+                  className="h-8 w-8 flex items-center justify-center bg-foreground text-background disabled:bg-muted disabled:text-muted-foreground/30 hover:opacity-85 active:scale-95 disabled:hover:opacity-100 disabled:active:scale-100 cursor-pointer disabled:cursor-not-allowed rounded-xl transition-all"
+                  title="Send message"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -58,6 +58,14 @@ export function buildOptimizedContextPayload(
 
   const formatMessageContent = (m: ChatMessage, isHistorical: boolean = false) => {
     let text = m.content;
+    
+    // Strip old mode tags so they don't persist into the next turn
+    text = text.replace(/(?:\r?\n)*\[System: The user has selected .*? mode\..*?\]/g, "");
+    
+    // Also strip AI-hallucinated response headers so the AI doesn't learn them as a permanent style
+    text = text.replace(/^\[Strict Technical\/Code Mode Response\](?:\r?\n)*/i, "");
+    text = text.replace(/^\[Reasoning Mode Response\](?:\r?\n)*/i, "");
+
     if (m.attachedZipContent) {
       if (isHistorical) {
         // Don't re-inject full zip on every turn — just acknowledge it was attached
@@ -151,10 +159,8 @@ export async function updateConversationMemoryIfNeeded(
     return sum + words;
   }, 0);
 
-  // Automatically summarize long-term memory when conversation exceeds word limit (unless forced)
-  // ALSO summarize periodically if we exceed the sliding window size (12 messages) 
-  // so that messages don't drop out of context before being summarized!
-  const isPastMessageLimit = validMessages.length > 12 && validMessages.length % 4 === 0;
+  // Automatically summarize long-term memory on EVERY user message (User requested instant sync)
+  const isPastMessageLimit = true; // Changed from (validMessages.length > 12 && ...)
 
   if (!force && totalWordCount < wordLimit && !isPastMessageLimit) return null;
 

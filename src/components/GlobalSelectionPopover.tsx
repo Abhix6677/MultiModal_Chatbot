@@ -83,7 +83,7 @@ export const GlobalSelectionPopover: React.FC<GlobalSelectionPopoverProps> = ({ 
     >
       <button
         type="button"
-        className="bg-[#10131A] text-[#F1F3F7] text-xs font-medium px-4 py-2 hover:bg-[#1A1D24] flex items-center gap-2 cursor-pointer shadow-xl border border-indigo-500/50 transition-colors rounded-xl"
+        className="bg-primary text-primary-foreground text-xs font-medium px-4 py-2 hover:bg-primary/90 flex items-center gap-2 cursor-pointer shadow-xl transition-colors rounded-xl border border-border"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();

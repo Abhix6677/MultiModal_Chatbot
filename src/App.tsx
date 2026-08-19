@@ -18,6 +18,7 @@ import {
 import { DEFAULT_CONFIG, PROVIDER_PRESETS } from "./data/providers";
 import { ConfigModal } from "./components/ConfigModal";
 import { Sidebar } from "./components/Sidebar";
+import { ApiConfig, ProviderType, Conversation, AttachedFile, ChatMessage } from "./types";
 import { ChatMessageItem } from "./components/ChatMessageItem";
 import { ChatInput } from "./components/ChatInput";
 import { WelcomeScreen } from "./components/WelcomeScreen";
@@ -73,10 +74,11 @@ export default function App() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isMemoryOpen, setIsMemoryOpen] = useState(false);
   const [isEvolutionOpen, setIsEvolutionOpen] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingConversations, setStreamingConversations] = useState<Set<string>>(new Set());
   const [visibleCountMap, setVisibleCountMap] = useState<Record<string, number>>({});
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
+  const isStreaming = streamingConversations.has(currentConvId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Sync from IndexedDB backup on initial load if available
@@ -194,6 +196,13 @@ export default function App() {
     setCurrentConvId(newId);
   };
 
+  const handleTogglePinConversation = (id: string) => {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c))
+    );
+    // State change will trigger the useEffect that calls saveConversationsToDB
+  };
+
   const handleDeleteConversation = (id: string) => {
     deleteConversationFromDB(id);
     setConversations((prev) => {
@@ -260,56 +269,82 @@ export default function App() {
     }
   };
 
-  const handleUpdateMemory = (newMemory: string) => {
+  const handleUpdateMemory = (newMemory: string, newIndex?: number) => {
     setConversations((prev) =>
-      prev.map((c) =>
-        c.id === currentConv.id ? { ...c, longTermMemory: newMemory } : c
-      )
+      prev.map((c) => {
+        if (c.id === currentConv.id) {
+          const updatedConv = {
+            ...c,
+            longTermMemory: newMemory,
+            ...(newIndex !== undefined ? { lastSummarizedMessageIndex: newIndex } : {})
+          };
+          return updatedConv;
+        }
+        return c;
+      })
     );
   };
 
+  // ============================================================
   // Background Auto-Evolution Logic (Layer 4)
+  // ============================================================
   const lastEvolvedMsgCountRef = useRef(currentConv?.messages.length || 0);
 
+  // Shared evolution runner — used by both triggers below
+  const runBackgroundEvolution = useCallback(async (triggerReason: string) => {
+    if (!conversations || conversations.length === 0) return;
+    console.log(`[CONCURRENCY] shadow_started: ${Date.now()} (reason: ${triggerReason})`);
+    const recentConvs = conversations.slice(0, 5);
+    const historyText = recentConvs.map(conv => {
+      const msgs = conv.messages.slice(-10).map(m => `${m.role.toUpperCase()}: ${m.content.substring(0, 500)}`).join("\n");
+      return `--- CHAT: ${conv.title} ---\n${msgs}`;
+    }).join("\n\n");
+    try {
+      const res = await fetch("/api/shadow-evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          historyText,
+          userId: "default_user",
+          globalSystemRules: config.globalSystemRules || "",
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.rules && typeof data.rules === "string" && data.rules.trim()) {
+          setConfig((prev) => ({ ...prev, globalSystemRules: data.rules }));
+        }
+      }
+      console.log(`[CONCURRENCY] shadow_completed: ${Date.now()}`);
+    } catch (e) {
+      console.error("Background evolution failed", e);
+      console.log(`[CONCURRENCY] shadow_completed: ${Date.now()}`);
+    }
+  }, [conversations, config.globalSystemRules]);
+
+  // Trigger 1: Every 1 message (User requested instant sync)
   useEffect(() => {
     const currentLen = currentConv?.messages.length || 0;
-    // Trigger background shadow evaluation every 6 messages
-    if (currentLen >= lastEvolvedMsgCountRef.current + 6) {
+    if (currentLen >= lastEvolvedMsgCountRef.current + 1) {
       lastEvolvedMsgCountRef.current = currentLen;
-      
-      const runBackgroundEvolution = async () => {
-        const recentConvs = conversations.slice(0, 5);
-        const historyText = recentConvs.map(conv => {
-          const msgs = conv.messages.slice(-10).map(m => `${m.role.toUpperCase()}: ${m.content.substring(0, 500)}`).join("\n");
-          return `--- CHAT: ${conv.title} ---\n${msgs}`;
-        }).join("\n\n");
-
-        try {
-          const res = await fetch("/api/shadow-evaluate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              provider: config.provider,
-              baseUrl: config.baseUrl,
-              apiKey: config.apiKey,
-              model: config.model,
-              historyText,
-            }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.rules) {
-              setConfig((prev) => ({ ...prev, globalSystemRules: data.rules }));
-            }
-          }
-        } catch (e) {
-          console.error("Background evolution failed", e);
-        }
-      };
-      
-      runBackgroundEvolution();
+      runBackgroundEvolution("1-message-threshold");
     }
-  }, [currentConv?.messages.length, conversations, config]);
+  }, [currentConv?.messages.length, runBackgroundEvolution]);
+
+  // Trigger 2: Immediate on correction signals
+  const lastCorrectionMsgRef = useRef<string>("");
+  useEffect(() => {
+    if (!currentConv || !currentConv.messages.length) return;
+    const msgs = currentConv.messages;
+    const lastUserMsg = [...msgs].reverse().find(m => m.role === "user");
+    if (!lastUserMsg || lastUserMsg.content === lastCorrectionMsgRef.current) return;
+    lastCorrectionMsgRef.current = lastUserMsg.content;
+    const correctionPatterns = /\b(don't|do not|stop|never|you forgot|you always|wrong|incorrect|i said|remember|told you|i told|not like this|i asked for|please remember|i prefer|from now on|always use|always say|never say|never use)\b/i;
+    if (correctionPatterns.test(lastUserMsg.content)) {
+      console.log("[Evolution] Correction signal — triggering immediate evolution.");
+      runBackgroundEvolution("correction-signal");
+    }
+  }, [currentConv?.messages.length, runBackgroundEvolution]);
 
   // High Throughput Streaming Message Dispatcher
   const handleSendMessage = async (
@@ -376,8 +411,14 @@ export default function App() {
       })
     );
 
-    setIsStreaming(true);
-    abortControllerRef.current = new AbortController();
+    setStreamingConversations(prev => {
+      const next = new Set(prev);
+      next.add(currentConv.id);
+      return next;
+    });
+    
+    const abortController = new AbortController();
+    abortControllersRef.current.set(currentConv.id, abortController);
 
     let accumulatedText = "";
     const startTime = Date.now();
@@ -441,8 +482,8 @@ export default function App() {
 
       // Limit global memory injection to avoid bloating the context window (which causes slow LLM responses)
       const otherChatsMemory = conversations
-        .filter(c => c.id !== currentConv.id && c.longTermMemory)
-        .slice(0, 5) // Only include the 5 most recent chats with memory
+        .filter(c => c.id !== currentConv.id && c.longTermMemory && !c.longTermMemory.includes("Backend memory updated."))
+        .slice(0, 5) // Only include the 5 most recent chats with valid summary
         .map(c => `[From prior chat "${c.title}"]: ${c.longTermMemory}`)
         .join('\n\n')
         .substring(0, 4000); // Hard limit to 4000 characters
@@ -456,7 +497,7 @@ export default function App() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: abortControllerRef.current.signal,
+        signal: abortController.signal,
         body: JSON.stringify({
           provider: config.provider,
           baseUrl: effectiveBaseUrl,
@@ -562,7 +603,8 @@ export default function App() {
       };
       updateConversationMemoryIfNeeded(updatedConvForMemory, config).then((extractedMemory) => {
         if (extractedMemory) {
-          handleUpdateMemory(extractedMemory);
+          const newIndex = updatedConvForMemory.messages.length - 1;
+          handleUpdateMemory(extractedMemory, newIndex);
         }
       });
     } catch (err: any) {
@@ -589,15 +631,26 @@ export default function App() {
         );
       }
     } finally {
-      setIsStreaming(false);
-      abortControllerRef.current = null;
+      setStreamingConversations(prev => {
+        const next = new Set(prev);
+        next.delete(currentConv.id);
+        return next;
+      });
+      abortControllersRef.current.delete(currentConv.id);
     }
   };
 
   const handleStopStreaming = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      setIsStreaming(false);
+    if (!currentConvId) return;
+    const controller = abortControllersRef.current.get(currentConvId);
+    if (controller) {
+      controller.abort();
+      setStreamingConversations(prev => {
+        const next = new Set(prev);
+        next.delete(currentConvId);
+        return next;
+      });
+      abortControllersRef.current.delete(currentConvId);
     }
   };
 
@@ -682,6 +735,7 @@ export default function App() {
         onNewConversation={handleNewConversation}
         onDeleteConversation={handleDeleteConversation}
         onRenameConversation={handleRenameConversation}
+        onTogglePinConversation={handleTogglePinConversation}
         onClearAll={handleClearAll}
         onOpenConfig={() => setIsConfigOpen(true)}
         config={config}
@@ -718,10 +772,10 @@ export default function App() {
             <button
               onClick={() => setIsMemoryOpen(true)}
               className="px-3 py-1 bg-app-surface hover:bg-app-surface-hover border border-app-border text-app-fg rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
-              title="Inspect Day 1 Infinite Context Memory"
+              title="Inspect Memory"
             >
               <Brain className="w-3.5 h-3.5 text-app-primary" />
-              <span className="hidden md:inline">Infinite Context Memory</span>
+              <span className="hidden md:inline">Memory</span>
             </button>
 
             {/* AI Evolution Hub Button */}
@@ -866,6 +920,7 @@ export default function App() {
         onClose={() => setIsMemoryOpen(false)}
         conversation={currentConv}
         onUpdateMemory={handleUpdateMemory}
+        onForceEvolve={() => runBackgroundEvolution("manual-force")}
         config={config}
       />
 

@@ -76,19 +76,6 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
 
   const currentPreset = PROVIDER_PRESETS.find((p) => p.id === formData.provider) || PROVIDER_PRESETS[0];
 
-  const handleProviderChange = (providerId: ProviderType) => {
-    const preset = PROVIDER_PRESETS.find((p) => p.id === providerId);
-    if (preset) {
-      setFormData((prev) => ({
-        ...prev,
-        provider: providerId,
-        baseUrl: preset.defaultBaseUrl,
-        model: preset.defaultModel,
-      }));
-      setTestResult(null);
-    }
-  };
-
   const handleTestConnection = async () => {
     setTesting(true);
     setTestResult(null);
@@ -153,20 +140,20 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 overflow-y-auto font-sans text-app-fg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 overflow-y-auto font-sans text-foreground">
       <div
         id="config-modal-card"
-        className="relative w-full max-w-2xl bg-app-card rounded-2xl shadow-2xl border border-app-border overflow-hidden my-8"
+        className="relative w-full max-w-2xl bg-card rounded-2xl shadow-2xl border overflow-hidden my-8"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-app-border bg-app-sidebar">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b bg-muted/50">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-app-primary text-white flex items-center justify-center shadow-sm ">
+            <div className="w-8 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
               <Sliders className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-app-fg tracking-tight">API &amp; Endpoint Settings</h2>
-              <p className="text-[11px] text-app-muted font-mono">
+              <h2 className="text-sm font-bold text-foreground tracking-tight">API &amp; Endpoint Settings</h2>
+              <p className="text-[11px] text-muted-foreground font-mono">
                 Configure your API key, base URL, and provider settings
               </p>
             </div>
@@ -174,67 +161,23 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
           <button
             id="close-config-modal-btn"
             onClick={onClose}
-            className="p-1.5 text-app-muted hover:text-app-fg hover:bg-app-bg hover:brightness-95 rounded-xl transition-colors"
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-xl transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-5 bg-app-card">
-          {/* Provider Selection Grid */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-app-muted mb-2 font-mono">
-              1. Selected Endpoint Preset
-            </label>
-            <div className="grid grid-cols-1 gap-2">
-              {PROVIDER_PRESETS.map((preset) => {
-                const isSelected = formData.provider === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    id={`provider-btn-${preset.id}`}
-                    onClick={() => handleProviderChange(preset.id)}
-                    className={`flex items-start p-3 rounded-xl border text-left transition-all ${
-                      isSelected
-                        ? "border-indigo-600 bg-app-surface-active text-app-primary font-semibold shadow-2xs"
-                        : "border-app-border hover:border-app-primary/50 bg-app-bg/50 text-app-fg"
-                    }`}
-                  >
-                    <div
-                      className={`p-2 rounded-xl mr-3 shrink-0 ${
-                        isSelected
-                          ? "bg-app-primary text-white shadow-xs"
-                          : "bg-app-surface-hover text-app-muted"
-                      }`}
-                    >
-                      {renderProviderIcon(preset.iconName)}
-                    </div>
-                    <div className="overflow-hidden">
-                      <div className="text-xs font-bold text-app-fg">{preset.name}</div>
-                      <div className="text-[11px] text-app-primary font-mono mt-0.5">
-                        {preset.defaultBaseUrl}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-2 text-xs text-app-muted leading-relaxed">{currentPreset.description}</p>
-          </div>
-
+        <form onSubmit={handleSubmit} className="p-5 space-y-5 bg-card">
           {/* Form Fields Grid */}
-          <div className="space-y-4 pt-3 border-t border-app-border">
-            <label className="block text-xs font-bold uppercase tracking-wider text-app-muted font-mono">
-              2. Endpoint &amp; Credentials
+          <div className="space-y-4">
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+              Endpoint &amp; Credentials
             </label>
-
-
 
             {/* Model Name */}
             <div className="relative">
-              <label className="text-xs font-medium text-app-fg flex items-center gap-1.5 mb-1.5 font-mono">
-                <Cpu className="w-3.5 h-3.5 text-app-muted" />
+              <label className="text-xs font-medium text-foreground flex items-center gap-1.5 mb-1.5 font-mono">
+                <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
                 Model Name
               </label>
               <div className="relative">
@@ -248,19 +191,19 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
                   onFocus={() => setShowModelDropdown(true)}
                   onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
                   placeholder="Select or type model name"
-                  className="w-full px-3.5 py-2.5 bg-app-bg border border-app-border rounded-xl text-xs text-app-fg placeholder-app-text-disabled focus:outline-none focus:border-indigo-500 font-mono transition-colors"
+                  className="w-full px-3.5 py-2.5 bg-background border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary font-mono transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowModelDropdown(!showModelDropdown)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-app-muted hover:text-app-fg"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </button>
               </div>
               
               {showModelDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-app-card border border-app-border rounded-xl shadow-lg max-h-[160px] overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-card border rounded-xl shadow-lg max-h-[160px] overflow-y-auto">
                   {(() => {
                     const rawModelsList = allConfiguredModels.length > 0 ? allConfiguredModels : (currentPreset.popularModels || []);
                     const sortedModelsList = [...rawModelsList].sort((a, b) => {
@@ -282,18 +225,18 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
                             setFormData((prev) => ({ ...prev, model: modelOpt }));
                             setShowModelDropdown(false);
                           }}
-                          className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs hover:bg-app-surface-hover font-mono transition-colors border-b border-app-border last:border-0"
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs hover:bg-accent font-mono transition-colors border-b last:border-0"
                         >
-                          <span className={isOnline ? "text-app-fg" : "text-app-muted line-through opacity-70"}>{modelOpt}</span>
+                          <span className={isOnline ? "text-foreground" : "text-muted-foreground line-through opacity-70"}>{modelOpt}</span>
                           {isHealthCheckEnabled && (
-                            <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.6)]' : 'bg-red-400 opacity-50'}`} title={isOnline ? "Online (Health Check Passed)" : "Offline (Failed to ping endpoints)"} />
+                             <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.6)]' : 'bg-red-400 opacity-50'}`} title={isOnline ? "Online (Health Check Passed)" : "Offline (Failed to ping endpoints)"} />
                           )}
                         </button>
                       );
                     });
                   })()}
                   {allConfiguredModels.length === 0 && (currentPreset.popularModels || []).length === 0 && (
-                    <div className="px-3.5 py-2.5 text-xs text-app-muted font-mono italic">
+                     <div className="px-3.5 py-2.5 text-xs text-muted-foreground font-mono italic">
                       No models configured.
                     </div>
                   )}
@@ -302,9 +245,9 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
             </div>
 
             {/* Theme Selector */}
-            <div className="pt-3 border-t border-app-border">
-              <label className="text-xs font-semibold text-app-fg flex items-center gap-1.5 font-mono mb-2.5">
-                <Monitor className="w-3.5 h-3.5 text-app-primary" />
+            <div className="pt-3 border-t">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5 font-mono mb-2.5">
+                <Monitor className="w-3.5 h-3.5 text-primary" />
                 Appearance Theme
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -322,8 +265,8 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
                       onClick={() => setFormData((prev) => ({ ...prev, theme: t.id as any }))}
                       className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all ${
                         isSelected
-                          ? "bg-app-primary border-app-primary text-white font-semibold shadow-2xs"
-                          : "bg-app-bg border-app-border text-app-muted hover:text-app-fg hover:border-app-primary/50"
+                          ? "bg-primary border-primary text-primary-foreground font-semibold shadow-sm"
+                          : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
                       }`}
                     >
                       <Icon className="w-4 h-4 mb-1" />
@@ -335,13 +278,13 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
             </div>
 
             {/* Auto-Condense Limit Control (Words) */}
-            <div className="pt-3 border-t border-app-border">
+            <div className="pt-3 border-t">
               <div className="flex justify-between items-center mb-1.5">
-                <label className="text-xs font-semibold text-app-fg flex items-center gap-1.5 font-mono">
-                  <BrainCircuit className="w-3.5 h-3.5 text-app-primary" />
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1.5 font-mono">
+                  <BrainCircuit className="w-3.5 h-3.5 text-primary" />
                   Auto-Condense Limit (Word Count)
                 </label>
-                <span className="text-[11px] text-app-primary font-mono font-semibold">
+                <span className="text-[11px] text-primary font-mono font-semibold">
                   {(() => {
                     const w = formData.condenseWordLimit || 100000;
                     if (w >= 100000) {
@@ -368,7 +311,7 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
                     }));
                   }}
                   placeholder="e.g. 100000 for 1 Lakh words"
-                  className="w-full px-3.5 py-2.5 bg-app-bg border border-app-border rounded-xl text-xs text-app-fg placeholder-app-text-disabled focus:outline-none focus:border-indigo-500 font-mono transition-colors"
+                  className="w-full px-3.5 py-2.5 bg-background border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary font-mono transition-colors"
                 />
 
                 {/* Quick Word Limit Presets */}
@@ -387,8 +330,8 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
                       }
                       className={`px-2.5 py-1 rounded-xl text-[11px] font-mono border transition-all ${
                         (formData.condenseWordLimit || 100000) === preset.words
-                          ? "bg-app-primary border-app-primary text-white font-semibold shadow-2xs"
-                          : "bg-app-bg border-app-border text-app-muted hover:text-app-fg hover:border-app-primary/50"
+                          ? "bg-primary border-primary text-primary-foreground font-semibold shadow-sm"
+                          : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
                       }`}
                     >
                       {preset.label}
@@ -396,7 +339,7 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
                   ))}
                 </div>
 
-                <p className="text-[11px] text-app-muted font-mono leading-relaxed">
+                <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
                   Memory automatically condenses and saves key facts when total history exceeds your specified word threshold (e.g. 1 Lakh = 100,000 words, 256 Lakh = 25,600,000 words).
                 </p>
               </div>
@@ -404,20 +347,20 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({
           </div>
 
           {/* Buttons */}
-          <div className="flex items-center justify-end pt-3.5 border-t border-app-border">
+          <div className="flex items-center justify-end pt-3.5 border-t">
             <div className="flex items-center space-x-2">
               <button
                 type="button"
                 id="cancel-config-btn"
                 onClick={onClose}
-                className="px-3.5 py-2 text-app-muted hover:text-app-fg hover:bg-app-bg hover:brightness-95 rounded-xl text-xs transition-colors"
+                className="px-3.5 py-2 text-muted-foreground hover:text-foreground hover:bg-background rounded-xl text-xs transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 id="save-config-btn"
-                className="px-4 py-2 bg-app-primary hover:bg-app-primary-hover shadow-none hover:shadow-md text-white rounded-xl text-xs font-semibold shadow-md  transition-all"
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-semibold shadow-md transition-all"
               >
                 Save Settings &amp; Chat
               </button>
