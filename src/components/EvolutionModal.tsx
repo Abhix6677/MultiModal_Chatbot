@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '../utils/conversationStorage';
 import React, { useState, useEffect, useCallback } from "react";
 import {
   X, Cpu, Zap, Search, History, FlaskConical, AlertTriangle,
@@ -39,6 +40,7 @@ interface UserBehaviorModel {
   evolutionHistory: EvolutionEvent[];
   lastEvolvedAt: number;
   pausedUntil?: number;
+  manualRules?: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -82,7 +84,7 @@ const ACTION_COLORS: Record<string, string> = {
   REMOVE: "text-red-400",
 };
 
-type TabId = "model" | "experiments" | "history" | "manual" | "controls";
+type TabId = "model" | "experiments" | "history" | "controls" | "manual";
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const EvolutionModal: React.FC<EvolutionModalProps> = ({
@@ -95,7 +97,7 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
   const [activeTab, setActiveTab] = useState<TabId>("model");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [isRollingBack, setIsRollingBack] = useState(false);
-  const [manualRules, setManualRules] = useState(config.globalSystemRules || "");
+  const [manualRules, setManualRules] = useState("");
   const [model, setModel] = useState<UserBehaviorModel | null>(null);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -105,11 +107,12 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
   const loadModel = useCallback(async () => {
     setIsLoadingModel(true);
     try {
-      const res = await fetch("/api/evolution/model?userId=default_user");
+      const res = await fetch("/api/evolution/model", { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         if (data.model) {
           setModel(data.model);
+          setManualRules(data.model.manualRules || "");
           const paused = !!(data.model.pausedUntil && data.model.pausedUntil > Date.now());
           setIsPaused(paused);
         }
@@ -124,7 +127,7 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadModel();
-      setManualRules(config.globalSystemRules || "");
+      
     }
   }, [isOpen, loadModel]);
 
@@ -142,19 +145,16 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
     try {
       const res = await fetch("/api/shadow-evaluate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           historyText,
-          userId: "default_user",
+          
           globalSystemRules: config.globalSystemRules || "",
         }),
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.rules && typeof data.rules === "string" && data.rules.trim()) {
-          onUpdateConfig({ globalSystemRules: data.rules });
-          setManualRules(data.rules);
-        }
+
         await loadModel();
       }
     } catch (err) {
@@ -170,8 +170,8 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
     try {
       const res = await fetch("/api/evolution/rollback", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: "default_user" }),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({  }),
       });
       if (res.ok) {
         await loadModel();
@@ -188,8 +188,8 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
     try {
       await fetch("/api/evolution/pause", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: "default_user", pause: !isPaused }),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({  pause: !isPaused }),
       });
       setIsPaused(!isPaused);
     } catch (err) {
@@ -202,8 +202,8 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
     try {
       await fetch(`/api/evolution/rule/${ruleId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: "default_user", action }),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({  action }),
       });
       await loadModel();
     } catch (err) {
@@ -211,9 +211,19 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
     }
   };
 
-  const handleSaveManual = () => {
-    onUpdateConfig({ globalSystemRules: manualRules });
-    onClose();
+  const handleSaveManual = async () => {
+    try {
+      await fetch("/api/evolution/manual", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ manualRules })
+      });
+      // reload model
+      await loadModel();
+      onClose();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // ── Derived data ─────────────────────────────────────────────────────────
@@ -232,7 +242,7 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
     { id: "model", label: "Learned Rules", count: activeRules.length },
     { id: "experiments", label: "Experiments", count: experimentalRules.length },
     { id: "history", label: "History", count: model?.version },
-    { id: "manual", label: "Manual" },
+        { id: "manual", label: "Manual" },
     { id: "controls", label: "Controls" },
   ];
 
@@ -445,27 +455,21 @@ export const EvolutionModal: React.FC<EvolutionModalProps> = ({
             </div>
           )}
 
-          {/* ── Manual Override Tab ── */}
+                    {/* ── Manual Override Tab ── */}
           {activeTab === "manual" && (
             <div className="space-y-3">
               <div className="p-3 bg-accent border rounded-xl text-xs text-foreground leading-relaxed flex items-start gap-2.5">
                 <Search className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
                 <div>
-                  <strong>Manual Override:</strong> Edit the raw behavior rules string directly. These rules are injected into every chat. The AI Evolution engine builds on top of these.
+                  <strong>Manual Override:</strong> Edit the raw behavior rules string directly. These rules are injected into every chat for this profile only. The AI Evolution engine builds on top of these.
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 font-mono">
-                  Global Behavior Rules
-                </label>
-                <textarea
-                  value={manualRules}
-                  onChange={(e) => setManualRules(e.target.value)}
-                  placeholder="e.g. Always respond concisely. Never use apologies. Prefer vanilla CSS..."
-                  rows={10}
-                  className="w-full p-3.5 bg-background border rounded-xl text-xs text-foreground placeholder:text-muted-foreground font-mono focus:outline-none focus:border-purple-500 leading-relaxed transition-colors"
-                />
-              </div>
+              <textarea
+                className="w-full h-48 bg-muted border rounded-xl p-3 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none transition-all"
+                value={manualRules}
+                onChange={(e) => setManualRules(e.target.value)}
+                placeholder="E.g., Always reply in Hindi.\nNever use emojis..."
+              />
             </div>
           )}
 

@@ -367,13 +367,28 @@ export const ChatMessageItem = React.memo(
                 {message.attachments && message.attachments.length > 0 && (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {message.attachments.map((file, idx) => (
-                      <div key={idx} className="relative group inline-block max-w-[200px] rounded-xl overflow-hidden border bg-background/50">
+                      <div key={idx} className="relative group inline-block">
                         {file.type === "image" ? (
-                          <img src={file.dataUrl} alt={file.fileName} className="w-full h-auto object-cover" />
+                          <div className="max-w-[280px] rounded-xl overflow-hidden border bg-background/50 shadow-sm">
+                            <img src={file.dataUrl} alt={file.fileName} className="w-full h-auto object-cover" />
+                          </div>
                         ) : (
-                          <div className="inline-flex items-center gap-2 px-3 py-2 text-xs font-mono">
-                            <FileArchive className="w-4 h-4 text-primary" />
-                            <span className="truncate">{file.fileName}</span>
+                          <div className="flex h-12 max-w-[220px] rounded-2xl border border-border/40 bg-accent/40 items-center pr-4 pl-2 overflow-hidden shadow-sm">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-accent border border-border/50 flex items-center justify-center mr-3 overflow-hidden">
+                              {file.type === "zip" ? (
+                                <FileArchive className="w-4 h-4 text-muted-foreground" />
+                              ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                              )}
+                            </div>
+                            <div className="flex flex-col justify-center min-w-0 py-1">
+                              <span className="text-[13px] font-medium text-foreground truncate leading-tight">
+                                {file.fileName || "Unnamed file"}
+                              </span>
+                              <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider mt-0.5">
+                                {file.type === "zip" ? "ZIP ARCHIVE" : "DOCUMENT"}
+                              </span>
+                            </div>
                           </div>
                         )}
                       </div>

@@ -7,3 +7,21 @@ coverage/
 .env*
 !.env.example
 data/
+
+.env
+.env.*
+!.env.example
+
+# Temporary repair/test scripts
+fix_*.py
+fix_*.mjs
+apply_*.py
+revert_*.py
+clean_rules.py
+write_ps*.py
+log_preview.py
+test*.ts
+stream_test.txt
+
+fix.py
+fix.mjs

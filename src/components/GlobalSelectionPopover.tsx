@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getAuthHeaders } from '../utils/conversationStorage';
 import { Sparkles } from "lucide-react";
 
 export interface GlobalSelectionPopoverProps {

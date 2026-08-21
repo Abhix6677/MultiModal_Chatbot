@@ -29,6 +29,19 @@ import {
   deleteConversation, 
   clearUserConversations 
 } from "./backendConversations";
+import {
+  initProfilesAndMigrate,
+  getProfiles,
+  createProfile,
+  deleteProfile,
+  updateProfile,
+  createSession,
+  getProfileIdForSession,
+  deleteSession
+} from "./backendProfiles";
+
+// Initialize profiles and migrate default_user data if necessary
+initProfilesAndMigrate();
 
 
 // ============================================================
@@ -145,6 +158,107 @@ const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: "200mb" }));
 app.use(express.urlencoded({ limit: "200mb", extended: true }));
+
+declare global {
+  namespace Express {
+    interface Request {
+      profileId?: string;
+    }
+  }
+}
+
+// ----------------------------------------------------------------------
+// PROFILES API & AUTH MIDDLEWARE
+// ----------------------------------------------------------------------
+app.get("/api/profiles", (req, res) => {
+  res.json(getProfiles());
+});
+
+app.post("/api/profiles", (req, res) => {
+  const { name, avatar } = req.body;
+  if (!name) return res.status(400).json({ error: "Name is required" });
+  const profile = createProfile(name, avatar);
+  res.json(profile);
+});
+
+
+app.patch("/api/profiles/:id", (req, res) => {
+  const { name, avatar } = req.body;
+  if (!name) return res.status(400).json({ error: "Name is required" });
+  const updated = updateProfile(req.params.id, name, avatar);
+  if (updated) {
+    res.json(updated);
+  } else {
+    res.status(404).json({ error: "Profile not found" });
+  }
+});
+
+app.delete("/api/profiles/:id", (req, res) => {
+  const success = deleteProfile(req.params.id);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: "Profile not found" });
+  }
+});
+
+app.post("/api/profiles/auth", (req, res) => {
+  const { profileId } = req.body;
+  try {
+    const session = createSession(profileId);
+    res.json(session);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post("/api/profiles/logout", (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    deleteSession(token);
+  }
+  res.json({ success: true });
+});
+
+// Middleware to protect routes that require profile context
+function requireProfileContext(req: express.Request, res: express.Response, next: express.NextFunction) {
+  // Allow unauthenticated access to specific open routes
+  const openRoutes = [
+    '/api/profiles',
+    '/api/profiles/auth',
+    '/api/profiles/logout',
+    '/api/health',
+    '/api/test-connection',
+    '/api/active-models',
+    '/api/describe-image'
+  ];
+  
+  if (openRoutes.includes(req.path) || req.path.startsWith('/assets/')) {
+    return next();
+  }
+  
+  // For other API routes, check token
+  if (req.path.startsWith('/api/')) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Profile context required (Missing Token)" });
+    }
+    
+    const token = authHeader.substring(7);
+    const profileId = getProfileIdForSession(token);
+    
+    if (!profileId) {
+      return res.status(401).json({ error: "Profile context required (Invalid or Expired Token)" });
+    }
+    
+    req.profileId = profileId;
+  }
+  
+  next();
+}
+
+app.use(requireProfileContext);
 
 // Helper to normalize base URL
 function normalizeBaseUrl(url: string): string {
@@ -418,7 +532,8 @@ async function executeBackgroundLLM(modelsString: string, prompt: string, maxTok
 
 app.post("/api/summarize-memory", async (req, res) => {
   try {
-    const { provider, baseUrl, apiKey, model, historyText, existingMemory, convId, lastSummarizedIndex, isGlobal, userId = "default_user" } = req.body;
+    const { provider, baseUrl, apiKey, model, historyText, existingMemory, convId, lastSummarizedIndex, isGlobal,  } = req.body;
+    const userId = req.profileId!;
 
     const memoryPrompt = `Analyze the following chat conversation history.
 Task 1: Update the ongoing CONVERSATIONAL SUMMARY (a concise narrative of what is being discussed, current status, and context). It should incorporate the existing summary if provided.
@@ -520,7 +635,7 @@ app.get("/api/conversations", (req, res) => {
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
   try {
-    const userId = (req.query.userId as string) || "default_user";
+    const userId = req.profileId!;
     const conversations = getUserConversations(userId);
     return res.json({ ok: true, conversations });
   } catch (err: any) {
@@ -530,7 +645,8 @@ app.get("/api/conversations", (req, res) => {
 
 app.post("/api/conversations", (req, res) => {
   try {
-    const { userId = "default_user", conversation, conversations } = req.body;
+    const { conversation, conversations } = req.body;
+    const userId = req.profileId!;
     if (conversation) {
       const saved = saveOrUpdateConversation(userId, conversation);
       return res.json({ ok: true, conversation: saved });
@@ -546,7 +662,7 @@ app.post("/api/conversations", (req, res) => {
 
 app.delete("/api/conversations/:id", (req, res) => {
   try {
-    const userId = (req.query.userId as string) || (req.body?.userId as string) || "default_user";
+    const userId = req.profileId!;
     const { id } = req.params;
     const deleted = deleteConversation(userId, id);
     return res.json({ ok: true, deleted });
@@ -557,7 +673,7 @@ app.delete("/api/conversations/:id", (req, res) => {
 
 app.delete("/api/conversations", (req, res) => {
   try {
-    const userId = (req.query.userId as string) || (req.body?.userId as string) || "default_user";
+    const userId = req.profileId!;
     clearUserConversations(userId);
     return res.json({ ok: true, cleared: true });
   } catch (err: any) {
@@ -690,7 +806,7 @@ ${userMessage}`;
 
 // Memory Inspection / Debug Endpoint
 app.get("/api/debug/memory", (req, res) => {
-  const userId = (req.query.userId as string) || "default_user";
+  const userId = req.profileId!;
   const memories = getUserMemories(userId);
   const activeMemories = memories.filter(m => m.status === "active");
   const supersededMemories = memories.filter(m => m.status === "superseded");
@@ -706,7 +822,8 @@ app.get("/api/debug/memory", (req, res) => {
 // Clears a conversation's memory file from disk (called when user clicks "Clear Memory")
 app.post("/api/migrate-memory", async (req, res) => {
   try {
-    const { userId = "default_user", globalMemory } = req.body;
+    const { globalMemory } = req.body;
+    const userId = req.profileId!;
     if (!globalMemory || typeof globalMemory !== 'string') {
       return res.json({ success: true, message: "No legacy memory to migrate." });
     }
@@ -887,6 +1004,18 @@ function isVisionModel(model: string): boolean {
   if (!model) return false;
   const lower = model.toLowerCase();
   
+  // 1. Check dynamic .env variable first (VITE_VISION_MODELS)
+  const envVisionModels = getDynamicEnv("VITE_VISION_MODELS");
+  if (envVisionModels) {
+    const visionKeywords = envVisionModels.split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
+    for (const keyword of visionKeywords) {
+      if (lower.includes(keyword)) {
+        return true;
+      }
+    }
+  }
+  
+  // 2. Fallback to hardcoded list if not found in .env (or if .env is not configured)
   // The Llama 3.2 Vision proxy endpoints often fail with base64 image_url arrays 
   // or have strict 1-image limits that bug out. We force them through the transcoder.
   if (lower.includes('llama')) return false; 
@@ -894,8 +1023,9 @@ function isVisionModel(model: string): boolean {
   if (lower.includes('vision') || lower.includes('vl') || lower.includes('pixtral')) return true;
   if (lower.includes('gpt-4o')) return true;
   if (lower.includes('claude-3-5-sonnet') || lower.includes('claude-3-opus') || lower.includes('claude-3-haiku') || lower.includes('claude-3-7-sonnet')) return true;
-  if (lower.includes('gemini-1.5') || lower.includes('gemini-2.0') || lower.includes('gemini-2.5')) return true;
+  if (lower.includes('gemini-1.5') || lower.includes('gemini-2.0') || lower.includes('gemini-2.5') || lower.includes('gemini-3')) return true;
   if (lower.includes('llava')) return true;
+  
   return false;
 }
 
@@ -1153,9 +1283,10 @@ app.post("/api/chat", async (req, res) => {
       temperature = 0.7,
       maxTokens,
       webSearch,
-      userId = "default_user",
+      /* removed userId */
       conversationId = "unknown_conv",
     } = req.body;
+    const userId = req.profileId!;
 
     // Smart Multi-Endpoint Routing logic
     if (provider === "custom" && isHealthCheckEnabled && modelRoutingMap[model]) {
@@ -1182,13 +1313,20 @@ app.post("/api/chat", async (req, res) => {
     });
     
     augmentedSystemPrompt += "\n" + backendCtx.contextStr;
+
+    // --- EVOLVE AI CONTEXT INJECTION ---
+    const evolutionRules = getActiveRulesForPrompt(userId, userMessage);
+    if (evolutionRules) {
+      augmentedSystemPrompt += "\n\n" + evolutionRules;
+    }
+
     const promptBuildEndTime = Date.now();
 
     // Memory extraction deferred to after stream completion.
     const shouldExtractMemory = userMessage && userMessage.trim().length >= 3 && !isUserFactQuery(userMessage);
 
     const currentDateTime = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "full", timeStyle: "long" });
-    augmentedSystemPrompt = `[System Info: Current Date and Time is ${currentDateTime}]\n\n` + augmentedSystemPrompt;
+    augmentedSystemPrompt = `[System Info: Current Date and Time is ${currentDateTime}]\n\nIMPORTANT FORMATTING RULE: If you write any code (especially HTML, XML, or SVG), you MUST wrap it completely in a standard markdown code block with the appropriate language tag (e.g. \`\`\`html). Do not output raw HTML or it will not be rendered.\n\n` + augmentedSystemPrompt;
 
     if (webSearch && messages.length > 0) {
       try {
@@ -1358,12 +1496,11 @@ app.post("/api/chat", async (req, res) => {
         return res.status(503).json({ error: `Upstream API Error (Proxy JSON): ${parseMsg}` });
       }
 
-      setupSSEResponse(res);
-
       if (!response.body) {
         return res.status(500).json({ error: "No response body received from Anthropic." });
       }
 
+      setupSSEResponse(res);
       const reader = (response.body as any).getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -1528,13 +1665,8 @@ timestamp: ${new Date().toISOString()}`);
           continue; // TRY NEXT ENDPOINT
         }
 
-        setupSSEResponse(res);
-
         if (!response.body) {
-          // Headers already sent by setupSSEResponse, must close stream
-          res.write(`data: ${JSON.stringify({ error: "No response body received from upstream API." })}\n\n`);
-          res.write("data: [DONE]\n\n");
-          return res.end();
+          throw new Error("No response body received from upstream API.");
         }
 
         const reader = (response.body as any).getReader();
@@ -1545,6 +1677,7 @@ timestamp: ${new Date().toISOString()}`);
         let charCount = 0;
         let ttft: number | null = null;
         let firstChunkData: string = "";
+        let fullOutputData: string = "";
         const startTime = Date.now();
 
         let providerFirstChunkTime: number | null = null;
@@ -1559,10 +1692,21 @@ timestamp: ${new Date().toISOString()}`);
         let isThinking = false;
         let thinkStartMatch = "";
         let thinkEndMatch = "";
+        let isSSESetup = false;
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            if (chunksCount === 0) {
+              throw new Error("Upstream API returned an empty stream (0 chunks).");
+            }
+            break;
+          }
+          
+          if (!isSSESetup) {
+            setupSSEResponse(res);
+            isSSESetup = true;
+          }
           
           if (providerFirstChunkTime === null) providerFirstChunkTime = Date.now();
           if (ttft === null) ttft = Date.now() - startTime;
@@ -1594,6 +1738,11 @@ timestamp: ${new Date().toISOString()}`);
                   continue;
                 }
                 let content = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.text || "";
+                
+                const reasoningContent = parsed.choices?.[0]?.delta?.reasoning_content;
+                if (reasoningContent) {
+                  content += `<think>${reasoningContent}</think>`;
+                }
                 
                 if (content && shouldFilterReasoning) {
                   let outputContent = "";
@@ -1645,6 +1794,7 @@ timestamp: ${new Date().toISOString()}`);
                      if (providerFirstTokenTime === null) providerFirstTokenTime = Date.now();
                   }
                   charCount += content.length;
+                  fullOutputData += content;
                   res.write(`data: ${JSON.stringify({ content })}\n\n`);
                 }
               } catch (e) {
@@ -1656,8 +1806,6 @@ timestamp: ${new Date().toISOString()}`);
         
         const totalTime = Date.now() - startTime;
         
-
-
         console.log(`\n[AI RESPONSE]
 requestId: ${requestId}
 status: ${response.status}
@@ -1667,6 +1815,7 @@ ttft: ${ttft}ms
 chunks: ${chunksCount}
 bytes: ${bytesCount}
 characters: ${charCount}`);
+        console.log(`\n[AI FULL TEXT PREVIEW]\n${fullOutputData.substring(0, 5000)}`);
 
         const resultState = (chunksCount === 0 || charCount === 0) ? "EMPTY" : "SUCCESS";
         
@@ -1688,6 +1837,10 @@ provider_headers_received: ${providerHeadersReceivedTime}
 provider_first_chunk: ${providerFirstChunkTime}
 provider_first_token: ${providerFirstTokenTime}
 generation_complete: ${Date.now()}`);
+
+        if (resultState === "EMPTY") {
+            res.write(`data: ${JSON.stringify({ content: "AI_RESPONSE_EMPTY" })}\n\n`);
+        }
 
         res.write("data: [DONE]\n\n");
         res.end();
@@ -1792,12 +1945,10 @@ async function startServer() {
   app.post("/api/shadow-evaluate", async (req, res) => {
     console.log("[Server] /api/shadow-evaluate triggered! Background Evolution is running...");
     try {
-      const { historyText, userId = "default_user", globalSystemRules } = req.body;
+      const { historyText, globalSystemRules } = req.body;
+    const userId = req.profileId!;
 
-      // --- One-time migration: if user has old flat rules but no behavior_model yet ---
-      if (globalSystemRules) {
-        migrateFromGlobalSystemRules(userId, globalSystemRules);
-      }
+      // Migration removed to prevent global rules from leaking into all profiles.
 
       if (isEvolutionPaused(userId)) {
         console.log(`[Shadow Evaluate] Evolution paused for user ${userId}. Skipping.`);
@@ -1948,7 +2099,7 @@ OUTPUT FORMAT:
   // GET full UserBehaviorModel
   app.get("/api/evolution/model", (req, res) => {
     try {
-      const userId = (req.query.userId as string) || "default_user";
+      const userId = req.profileId!;
       const model = loadBehaviorModel(userId);
       res.json({ ok: true, model });
     } catch (e: any) {
@@ -1959,7 +2110,7 @@ OUTPUT FORMAT:
   // GET evolution history
   app.get("/api/evolution/history", (req, res) => {
     try {
-      const userId = (req.query.userId as string) || "default_user";
+      const userId = req.profileId!;
       const model = loadBehaviorModel(userId);
       res.json({ ok: true, history: model.evolutionHistory, version: model.version });
     } catch (e: any) {
@@ -1970,7 +2121,8 @@ OUTPUT FORMAT:
   // POST rollback last evolution
   app.post("/api/evolution/rollback", (req, res) => {
     try {
-      const { userId = "default_user" } = req.body;
+      const {  } = req.body;
+    const userId = req.profileId!;
       const result = rollbackLastEvolution(userId);
       res.json({ ok: result.success, message: result.message, model: result.model });
     } catch (e: any) {
@@ -1981,7 +2133,8 @@ OUTPUT FORMAT:
   // PATCH a specific rule (promote/reject/delete)
   app.patch("/api/evolution/rule/:id", (req, res) => {
     try {
-      const { userId = "default_user", action } = req.body;
+      const { action } = req.body;
+    const userId = req.profileId!;
       const { id } = req.params;
       let success = false;
       if (action === 'promote') {
@@ -1997,10 +2150,26 @@ OUTPUT FORMAT:
     }
   });
 
+
+  // PATCH manual rules
+  app.patch("/api/evolution/manual", (req, res) => {
+    try {
+      const { manualRules } = req.body;
+      const userId = req.profileId!;
+      const model = loadBehaviorModel(userId);
+      model.manualRules = manualRules;
+      saveBehaviorModel(model);
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
   // POST pause/resume evolution
   app.post("/api/evolution/pause", (req, res) => {
     try {
-      const { userId = "default_user", pause, durationMs = 24 * 60 * 60 * 1000 } = req.body;
+      const { pause, durationMs = 24 * 60 * 60 * 1000 } = req.body;
+    const userId = req.profileId!;
       if (pause) {
         pauseEvolution(userId, durationMs);
         res.json({ ok: true, paused: true });
@@ -2016,7 +2185,7 @@ OUTPUT FORMAT:
   // GET contextual rules for a given message (for debug/preview)
   app.get("/api/evolution/rules-preview", (req, res) => {
     try {
-      const userId = (req.query.userId as string) || "default_user";
+      const userId = req.profileId!;
       const message = (req.query.message as string) || "";
       const rules = getActiveRulesForPrompt(userId, message);
       const paused = isEvolutionPaused(userId);
@@ -2027,6 +2196,33 @@ OUTPUT FORMAT:
   });
 
   // --- MODEL HEALTH CHECK LOGIC ---
+  async function pingVisionCapability(modelName: string, baseUrl: string, apiKey: string): Promise<boolean> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    const tinyImage = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+    try {
+      const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [{ role: "user", content: [ { type: "text", text: "ping" }, { type: "image_url", image_url: { url: `data:image/png;base64,${tinyImage}` } } ] }],
+          max_tokens: 1
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (response.ok) return true;
+      return false;
+    } catch (e) {
+      clearTimeout(timeout);
+      return false;
+    }
+  }
+
   async function pingModel(modelName: string, baseUrl: string, apiKey: string): Promise<boolean> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
@@ -2114,6 +2310,69 @@ OUTPUT FORMAT:
   runModelHealthCheck();
   // Run periodically every 3 minutes
   setInterval(runModelHealthCheck, 3 * 60 * 1000); 
+
+  async function syncVisionModels() {
+    console.log("[VisionSync] Starting dynamic vision model capability check...");
+    
+    const instance1 = {
+      baseUrl: process.env.VITE_API_BASE_URL || "",
+      apiKey: process.env.VITE_API_KEY || ""
+    };
+    const instance2 = {
+      baseUrl: process.env.VITE_OMNIROUTE_2_BASE_URL || "",
+      apiKey: process.env.VITE_OMNIROUTE_2_API_KEY || ""
+    };
+
+    const allModelsString = getDynamicEnv("VITE_API_MODELS") || "";
+    const allModels = Array.from(new Set(allModelsString.split(",").map(m => m.trim()).filter(Boolean)));
+    
+    if (allModels.length === 0) return;
+
+    const confirmedVisionModels: string[] = [];
+
+    for (const model of allModels) {
+      let isVision = false;
+      if (instance1.baseUrl && instance1.apiKey) {
+         isVision = await pingVisionCapability(model, instance1.baseUrl, instance1.apiKey);
+      }
+      if (!isVision && instance2.baseUrl && instance2.apiKey) {
+         isVision = await pingVisionCapability(model, instance2.baseUrl, instance2.apiKey);
+      }
+      
+      if (isVision) {
+        confirmedVisionModels.push(model);
+      }
+    }
+    
+    console.log(`[VisionSync] Completed! Verified Vision Models: ${confirmedVisionModels.join(", ")}`);
+    
+    try {
+      const envPath = ".env";
+      if (fs.existsSync(envPath)) {
+        let content = fs.readFileSync(envPath, "utf-8");
+        const newVisionString = confirmedVisionModels.join(",");
+        
+        if (content.match(/^VITE_VISION_MODELS=.*$/m)) {
+          content = content.replace(/^VITE_VISION_MODELS=.*$/m, `VITE_VISION_MODELS="${newVisionString}"`);
+        } else {
+          content += `\nVITE_VISION_MODELS="${newVisionString}"\n`;
+        }
+        
+        fs.writeFileSync(envPath, content, "utf-8");
+        console.log("[VisionSync] .env file dynamically updated with new vision models.");
+      }
+    } catch (e) {
+      console.error("[VisionSync] Failed to update .env", e);
+    }
+  }
+
+  // Hook up Vision Sync with configurable timer
+  const syncIntervalHours = parseFloat(getDynamicEnv("MODEL_SYNC_INTERVAL_HOURS") || "1");
+  const syncIntervalMs = syncIntervalHours * 60 * 60 * 1000;
+  
+  // Run once on startup after 10s delay
+  setTimeout(syncVisionModels, 10000);
+  setInterval(syncVisionModels, syncIntervalMs);
 
   // Watch .env file for dynamic updates and trigger health check instantly
   if (fs.existsSync(".env")) {

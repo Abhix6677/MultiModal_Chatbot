@@ -1,4 +1,5 @@
-import { ChatMessage, Conversation, ApiConfig } from "../types";
+import { getAuthHeaders } from './conversationStorage';
+import { ChatMessage, Conversation, ApiConfig, AttachedFile } from "../types";
 
 const MAX_RECENT_MESSAGES_IN_CONTEXT = 40; // Increased to 40 to remember exact prompts from previous sessions better
 const ANCHOR_DAY_ONE_MESSAGES = 10; // Keep first 10 messages (Day 1 origin) always present
@@ -8,14 +9,16 @@ const ANCHOR_DAY_ONE_MESSAGES = 10; // Keep first 10 messages (Day 1 origin) alw
  * long-term memory summary, and recent messages while staying lightweight (<2k tokens)
  * so the API call is fast and never lags or crashes.
  */
+
 export function buildOptimizedContextPayload(
   conversation: Conversation,
   newPrompt: string,
   attachedZipContent?: string | null,
   zipFileName?: string | null,
   otherChatsMemory?: string,
-  activeQuoteText?: string
-): { messages: { role: string; content: string }[]; systemPromptWithMemory: string } {
+  activeQuoteText?: string,
+  currentAttachments?: AttachedFile[] | null
+): { messages: { role: string; content: any }[]; systemPromptWithMemory: string } {
   const allMessages = conversation.messages.filter(
     (m) => (m.role === "user" || m.role === "assistant") && !m.isError
   );
@@ -56,7 +59,7 @@ export function buildOptimizedContextPayload(
 
   const fullSystemPrompt = `${baseSystemPrompt}${globalPersonaRules}${memoryHeader}`;
 
-  const formatMessageContent = (m: ChatMessage, isHistorical: boolean = false) => {
+  const formatMessageContent = (m: ChatMessage, isHistorical: boolean = false): any => {
     let text = m.content;
     
     // Strip old mode tags so they don't persist into the next turn
@@ -65,16 +68,30 @@ export function buildOptimizedContextPayload(
     // Also strip AI-hallucinated response headers so the AI doesn't learn them as a permanent style
     text = text.replace(/^\[Strict Technical\/Code Mode Response\](?:\r?\n)*/i, "");
     text = text.replace(/^\[Reasoning Mode Response\](?:\r?\n)*/i, "");
+    
+    // Strip generic AI preamble (often hallucinated by Cohere models) to prevent few-shot context poisoning
+    text = text.replace(/^I will assist (the user|you|the you) with (their|your) request\.?\*?(?:\r?\n)*/i, "");
 
     if (m.attachedZipContent) {
       if (isHistorical) {
-        // Don't re-inject full zip on every turn — just acknowledge it was attached
+        // Don't re-inject full zip on every turn - just acknowledge it was attached
         text += `\n\n[Previously attached codebase: "${m.zipFileName || 'codebase'}". Full content was analyzed in the original message. Refer to prior analysis.]`;
       } else {
         // Full injection only for the message where zip was actually attached
         text += `\n\n[ATTACHED CODEBASE - "${m.zipFileName || 'codebase'}"]:\n${m.attachedZipContent}`;
       }
     }
+
+    if (m.attachments && m.attachments.some(f => f.type === 'image')) {
+      const parts: any[] = [{ type: 'text', text }];
+      for (const file of m.attachments) {
+        if (file.type === 'image' && file.dataUrl) {
+          parts.push({ type: 'image_url', image_url: { url: file.dataUrl } });
+        }
+      }
+      return parts;
+    }
+
     return text;
   };
 
@@ -87,13 +104,23 @@ export function buildOptimizedContextPayload(
     finalNewPrompt += `\n\n[ATTACHED CODEBASE - "${zipFileName || 'codebase'}"]:\n${attachedZipContent}`;
   }
 
+  let currentTurnContent: any = finalNewPrompt;
+  if (currentAttachments && currentAttachments.some(f => f.type === 'image')) {
+    currentTurnContent = [{ type: 'text', text: finalNewPrompt }];
+    for (const file of currentAttachments) {
+      if (file.type === 'image' && file.dataUrl) {
+        currentTurnContent.push({ type: 'image_url', image_url: { url: file.dataUrl } });
+      }
+    }
+  }
+
   // If message history is short, send all messages (all recent, all get full zip)
   if (allMessages.length <= MAX_RECENT_MESSAGES_IN_CONTEXT + ANCHOR_DAY_ONE_MESSAGES) {
     const formatted = allMessages.map((m) => ({
       role: m.role,
       content: formatMessageContent(m, false), // full zip for all messages in short history
     }));
-    formatted.push({ role: "user", content: finalNewPrompt });
+    formatted.push({ role: "user", content: currentTurnContent });
     return { messages: formatted, systemPromptWithMemory: fullSystemPrompt };
   }
 
@@ -130,8 +157,8 @@ export function buildOptimizedContextPayload(
     }
   });
 
-  // Add current new user prompt
-  merged.push({ role: "user", content: finalNewPrompt });
+  // Add the new message
+  merged.push({ role: "user", content: currentTurnContent });
 
   return {
     messages: merged,
@@ -174,7 +201,7 @@ export async function updateConversationMemoryIfNeeded(
 
     const res = await fetch("/api/summarize-memory", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
       body: JSON.stringify({
         provider: config.provider,
         baseUrl: config.baseUrl,

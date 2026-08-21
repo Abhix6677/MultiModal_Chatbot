@@ -59,6 +59,7 @@ export interface UserBehaviorModel {
   evolutionHistory: EvolutionEvent[];
   lastEvolvedAt: number;
   totalInteractionsSinceEvolution: number;
+  manualRules?: string;
   pausedUntil?: number;       // Timestamp — if set and future, skip auto-evolution
 }
 
@@ -180,7 +181,11 @@ export function detectContext(userMessage: string): RuleContext {
 // ============================================================
 
 export function buildContextualRules(model: UserBehaviorModel, userMessage: string): string {
-  if (!model || model.rules.length === 0) return '';
+  if (!model) return '';
+  const hasAutomatedRules = model.rules && model.rules.length > 0;
+  const hasManualRules = model.manualRules && model.manualRules.trim().length > 0;
+  
+  if (!hasAutomatedRules && !hasManualRules) return '';
 
   const now = Date.now();
   const context = detectContext(userMessage);
@@ -199,15 +204,22 @@ export function buildContextualRules(model: UserBehaviorModel, userMessage: stri
     })
     .slice(0, 8); // Hard cap: max 8 rules to avoid token bloat
 
-  if (relevant.length === 0) return '';
+  let finalOutput = '';
 
-  const lines = relevant.map(r => {
-    const prefix = r.status === 'experimental' ? '[Experimental] ' : '';
-    const ctxTag = r.context !== '*' && r.context !== 'general' ? ` [${r.context} context]` : '';
-    return `- ${prefix}${r.rule}${ctxTag}`;
-  });
+  if (hasManualRules) {
+    finalOutput += `\n=== MANUAL BEHAVIOR RULES (User Overrides) ===\n${model.manualRules!.trim()}\n`;
+  }
 
-  return lines.join('\n');
+  if (relevant.length > 0) {
+    const lines = relevant.map(r => {
+      const prefix = r.status === 'experimental' ? '[Experimental] ' : '';
+      const ctxTag = r.context !== '*' && r.context !== 'general' ? ` [${r.context} context]` : '';
+      return `- ${prefix}${r.rule}${ctxTag}`;
+    });
+    finalOutput += `\n=== DYNAMIC BEHAVIOR RULES (Evolve AI) ===\n${lines.join('\n')}\n`;
+  }
+
+  return finalOutput.trim();
 }
 
 // ============================================================

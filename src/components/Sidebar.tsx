@@ -1,6 +1,6 @@
+import { LogOut, UserCircle } from 'lucide-react';
 import React, { useState } from "react";
-import {
-  Plus,
+import { Plus,
   MessageSquare,
   Trash2,
   Sliders,
@@ -32,6 +32,7 @@ interface SidebarProps {
   config: ApiConfig;
   onImportConversations: (imported: Conversation[]) => void;
   onOpenMemory: () => void;
+  onSwitchProfile: () => void;
   onOpenEvolution: () => void;
   onTogglePinConversation?: (id: string) => void;
 }
@@ -49,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenConfig,
   config,
   onOpenMemory,
+  onSwitchProfile,
   onOpenEvolution,
   onTogglePinConversation,
 }) => {
@@ -294,17 +296,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Bottom Actions */}
-        <div className="p-3 border-t bg-sidebar mt-auto flex flex-col gap-1">
+        <div className="p-3 border-t border-border/10 mt-auto flex flex-col gap-1">
           <button
-            onClick={onOpenMemory}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors"
+            onClick={onSwitchProfile}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground rounded-md transition-all active:scale-[0.98]"
           >
-            <Brain className="w-4 h-4" />
-            <span>Memory</span>
+            <UserCircle className="w-4 h-4" />
+            <span>Switch Profile</span>
           </button>
           <button
             onClick={onOpenConfig}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground rounded-md transition-all active:scale-[0.98]"
           >
             <Sliders className="w-4 h-4" />
             <span>Settings</span>

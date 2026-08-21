@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '../utils/conversationStorage';
 import React, { useState, useEffect } from "react";
 import { X, Brain, RefreshCw, Trash2, CheckCircle2, Sparkles } from "lucide-react";
 import { Conversation, ApiConfig } from "../types";

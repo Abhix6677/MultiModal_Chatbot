@@ -51,8 +51,7 @@ async function runTests() {
       confidence: 0.9,
       source: 'explicit',
       rule: 'Use Hinglish.',
-      evidence: 'User said use hinglish',
-      isTemporary: false
+      evidence: 'User said use hinglish'
     }]
   });
   
@@ -79,8 +78,7 @@ async function runTests() {
       confidence: 0.5,
       source: 'implicit',
       rule: 'Keep answers very short.',
-      evidence: 'User keeps asking for short answers',
-      isTemporary: false
+      evidence: 'User keeps asking for short answers'
     }]
   });
   assert(res3.model.rules.find(r => r.rule === 'Keep answers very short.')?.status === 'experimental', "Should be experimental");
@@ -94,8 +92,7 @@ async function runTests() {
       confidence: 0.75,
       source: 'implicit',
       rule: 'Keep answers very short.',
-      evidence: 'User repeatedly asks for short answers',
-      isTemporary: false
+      evidence: 'User repeatedly asks for short answers'
     }]
   });
   const shortRule = res4.model.rules.find(r => r.rule === 'Keep answers very short.');
@@ -114,8 +111,7 @@ async function runTests() {
       confidence: 0.95,
       source: 'explicit',
       rule: 'Provide exam-focused short answers.',
-      evidence: 'User said they have an exam today',
-      isTemporary: true
+      evidence: 'User said they have an exam today'
     }]
   });
   const tempRule = res5.model.rules.find(r => r.expiresAt !== undefined);
@@ -133,8 +129,7 @@ async function runTests() {
       confidence: 0.8,
       source: 'explicit',
       rule: 'Give detailed explanations.',
-      evidence: 'User asked for detailed explanations in coding',
-      isTemporary: false
+      evidence: 'User asked for detailed explanations in coding'
     }]
   });
   
@@ -155,8 +150,7 @@ async function runTests() {
       confidence: 0.9,
       source: 'explicit',
       rule: 'Provide very detailed long answers.',
-      evidence: 'User asked for long answers',
-      isTemporary: false
+      evidence: 'User asked for long answers'
     }]
   });
   
@@ -184,8 +178,7 @@ async function runTests() {
       confidence: 0.4,
       source: 'implicit',
       rule: 'Use emojis.',
-      evidence: 'User used emojis',
-      isTemporary: false
+      evidence: 'User used emojis'
     }]
   });
   const expRule = res8.model.rules.find(r => r.rule === 'Use emojis.');
@@ -220,8 +213,7 @@ async function runTests() {
       source: 'explicit',
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      lastConfirmedAt: Date.now(),
-      isTemporary: false
+      lastConfirmedAt: Date.now()
     });
   }
   saveBehaviorModel(spamModel);

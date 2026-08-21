@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { ProfileSelection } from "./components/ProfileSelection";
+import { getAuthHeaders, setSessionToken, loadAllConversations, persistConversation, removeConversation, removeAllConversations, syncAllConversationsToServer } from "./utils/conversationStorage";
 import {
   Menu,
   Sliders,
@@ -18,6 +20,7 @@ import {
 import { DEFAULT_CONFIG, PROVIDER_PRESETS } from "./data/providers";
 import { ConfigModal } from "./components/ConfigModal";
 import { Sidebar } from "./components/Sidebar";
+import { getProfileStyle } from "./utils/profileStyle";
 import { ApiConfig, ProviderType, Conversation, AttachedFile, ChatMessage } from "./types";
 import { ChatMessageItem } from "./components/ChatMessageItem";
 import { ChatInput } from "./components/ChatInput";
@@ -28,23 +31,33 @@ import { GlobalSelectionPopover } from "./components/GlobalSelectionPopover";
 import {
   buildOptimizedContextPayload,
   updateConversationMemoryIfNeeded,
-  saveConversationsToDB,
-  loadConversationsFromDB,
-  deleteConversationFromDB,
-  clearAllConversationsFromDB,
 } from "./utils/memory";
 
 const LOCAL_STORAGE_KEY_CONFIG = "ai_studio_chatbot_config_v2";
 const LOCAL_STORAGE_KEY_CONVERSATIONS = "ai_studio_chatbot_conversations_v2";
 const LOCAL_STORAGE_KEY_CURRENT_CONV = "ai_studio_chatbot_current_conv_v2";
 
+const getProfileScopedKey = (baseKey: string) => {
+  const profileId = localStorage.getItem("ai_studio_active_profile_id") || "default";
+  return `${baseKey}_${profileId}`;
+};
+
 export default function App() {
+  const [sessionToken, setSessionTokenState] = useState(() => localStorage.getItem("ai_studio_session_token") || "");
+  if (sessionToken) setSessionToken(sessionToken);
+
   const [config, setConfig] = useState<ApiConfig>(() => {
     let loadedConfig = DEFAULT_CONFIG;
     try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY_CONFIG);
+      const scopedKey = getProfileScopedKey(LOCAL_STORAGE_KEY_CONFIG);
+      const saved = localStorage.getItem(scopedKey);
       if (saved) {
         loadedConfig = { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+      } else {
+        const oldGlobal = localStorage.getItem(LOCAL_STORAGE_KEY_CONFIG);
+        if (oldGlobal) {
+          loadedConfig = { ...DEFAULT_CONFIG, ...JSON.parse(oldGlobal) };
+        }
       }
     } catch (e) {
       // fallback
@@ -81,21 +94,27 @@ export default function App() {
   const isStreaming = streamingConversations.has(currentConvId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Sync from IndexedDB backup on initial load if available
+  // Load conversations securely from backend for the current profile
   useEffect(() => {
-    async function syncFromIndexedDB() {
-      const dbConvs = await loadConversationsFromDB();
-      if (dbConvs && dbConvs.length > 0) {
-        setConversations(dbConvs);
+    let isActive = true;
+    async function loadConversationsSecurely() {
+      // Small delay to ensure session token is fully set
+      await new Promise(r => setTimeout(r, 50));
+      const serverConvs = await loadAllConversations();
+      
+      if (!isActive) return;
+
+      if (serverConvs && serverConvs.length > 0) {
+        setConversations(serverConvs);
         try {
-          const savedId = localStorage.getItem(LOCAL_STORAGE_KEY_CURRENT_CONV);
-          if (savedId && dbConvs.some((c: Conversation) => c.id === savedId)) {
+          const savedId = localStorage.getItem(getProfileScopedKey(LOCAL_STORAGE_KEY_CURRENT_CONV));
+          if (savedId && serverConvs.some((c: Conversation) => c.id === savedId)) {
             setCurrentConvId(savedId);
           } else {
-            setCurrentConvId(dbConvs[0].id);
+            setCurrentConvId(serverConvs[0].id);
           }
         } catch(e) {
-          setCurrentConvId(dbConvs[0].id);
+          setCurrentConvId(serverConvs[0].id);
         }
       } else {
         const initId = "conv_" + Date.now();
@@ -112,8 +131,25 @@ export default function App() {
       }
       setIsDbLoaded(true);
     }
-    syncFromIndexedDB();
-  }, []);
+    if (sessionToken) {
+      try {
+        const scopedKey = getProfileScopedKey(LOCAL_STORAGE_KEY_CONFIG);
+        const saved = localStorage.getItem(scopedKey);
+        if (saved) {
+          setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(saved) });
+        } else {
+          const oldGlobal = localStorage.getItem(LOCAL_STORAGE_KEY_CONFIG);
+          if (oldGlobal) {
+            setConfig({ ...DEFAULT_CONFIG, ...JSON.parse(oldGlobal) });
+          } else {
+            setConfig(DEFAULT_CONFIG);
+          }
+        }
+      } catch (e) {}
+      loadConversationsSecurely();
+    }
+    return () => { isActive = false; };
+  }, [sessionToken]);
 
   // Handle Theme switching
   useEffect(() => {
@@ -132,7 +168,7 @@ export default function App() {
   // Save config to LocalStorage
   useEffect(() => {
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY_CONFIG, JSON.stringify(config));
+      localStorage.setItem(getProfileScopedKey(LOCAL_STORAGE_KEY_CONFIG), JSON.stringify(config));
     } catch (e) {
       console.error("Failed to save config to localStorage", e);
     }
@@ -143,7 +179,7 @@ export default function App() {
     if (!isDbLoaded) return;
     const timer = setTimeout(() => {
       try {
-        saveConversationsToDB(conversations);
+        syncAllConversationsToServer(conversations);
       } catch (e) {
         console.error("Failed to save conversations to IndexedDB", e);
       }
@@ -156,7 +192,7 @@ export default function App() {
   useEffect(() => {
     if (currentConvId) {
       try {
-        localStorage.setItem(LOCAL_STORAGE_KEY_CURRENT_CONV, currentConvId);
+        localStorage.setItem(getProfileScopedKey(LOCAL_STORAGE_KEY_CURRENT_CONV), currentConvId);
       } catch (e) {}
     }
   }, [currentConvId]);
@@ -165,9 +201,9 @@ export default function App() {
   useEffect(() => {
     const handleBeforeUnload = () => {
       try {
-        saveConversationsToDB(conversations);
+        syncAllConversationsToServer(conversations);
         if (currentConvId) {
-          localStorage.setItem(LOCAL_STORAGE_KEY_CURRENT_CONV, currentConvId);
+          localStorage.setItem(getProfileScopedKey(LOCAL_STORAGE_KEY_CURRENT_CONV), currentConvId);
         }
       } catch (e) {}
     };
@@ -204,7 +240,7 @@ export default function App() {
   };
 
   const handleDeleteConversation = (id: string) => {
-    deleteConversationFromDB(id);
+    removeConversation(id);
     setConversations((prev) => {
       const filtered = prev.filter((c) => c.id !== id);
       if (filtered.length === 0) {
@@ -235,7 +271,7 @@ export default function App() {
 
   const handleClearAll = () => {
     if (window.confirm("Are you sure you want to clear all chat history?")) {
-      clearAllConversationsFromDB();
+      removeAllConversations();
       const initId = "conv_" + Date.now();
       const freshConv: Conversation = {
         id: initId,
@@ -302,7 +338,7 @@ export default function App() {
     try {
       const res = await fetch("/api/shadow-evaluate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           historyText,
           userId: "default_user",
@@ -449,28 +485,7 @@ export default function App() {
         let appendedFilesContext = "";
         
         for (const file of files) {
-          if (file.type === "image") {
-            try {
-              const descResp = await fetch("/api/describe-image", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  imageBase64: file.dataUrl,
-                  mimeType: file.mimeType,
-                  apiKey: config.visionApiKey || undefined,
-                }),
-              });
-              if (descResp.ok) {
-                const descData = await descResp.json();
-                if (descData.description) {
-                  file.content = descData.description;
-                  appendedFilesContext += `\n\n[IMAGE ANALYSIS: ${file.fileName}]\n${descData.description}`;
-                }
-              }
-            } catch (err) {
-              console.error("Vision API Error for file " + file.fileName, err);
-            }
-          } else if (file.type === "zip" || file.type === "text") {
+          if (file.type === "zip" || file.type === "text") {
             appendedFilesContext += `\n\n[FILE CONTENT: ${file.fileName}]\n${file.content}`;
           }
         }
@@ -489,14 +504,14 @@ export default function App() {
         .substring(0, 4000); // Hard limit to 4000 characters
       
       const { messages: payloadMessages, systemPromptWithMemory } =
-        buildOptimizedContextPayload(currentConv, textToSubmit, null, null, otherChatsMemory, activeQuoteText);
+        buildOptimizedContextPayload(currentConv, textToSubmit, null, null, otherChatsMemory, activeQuoteText, files);
 
       effectiveBaseUrl = config.baseUrl;
       const effectiveApiKey = config.apiKey;
 
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         signal: abortController.signal,
         body: JSON.stringify({
           provider: config.provider,
@@ -715,6 +730,16 @@ export default function App() {
   const stableHandleRetry = useCallback(() => handleRetryLastMessageRef.current(), []);
   const stableHandleEdit = useCallback((id: string, text: string) => handleEditUserMessageRef.current(id, text), []);
 
+  if (!sessionToken) {
+    return <ProfileSelection onProfileSelected={(token, profile) => {
+      localStorage.setItem("ai_studio_session_token", token);
+      localStorage.setItem("ai_studio_active_profile_id", profile.id);
+      localStorage.setItem("ai_studio_active_profile_name", profile.name);
+      setSessionToken(token);
+      setSessionTokenState(token);
+    }} />;
+  }
+
   if (!isDbLoaded) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-app-bg">
@@ -728,6 +753,14 @@ export default function App() {
       {/* Navigation Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
+        onSwitchProfile={() => {
+          localStorage.removeItem("ai_studio_session_token");
+          localStorage.removeItem("ai_studio_active_profile_id");
+          localStorage.removeItem("ai_studio_active_profile_name");
+          setSessionToken("");
+          setSessionTokenState("");
+        }}
+
         onClose={() => setIsSidebarOpen(false)}
         conversations={conversations}
         currentConversationId={currentConvId}
@@ -767,7 +800,18 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Active Profile Indicator */}
+            {localStorage.getItem("ai_studio_active_profile_id") && (
+              <div 
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-app-border bg-app-surface text-app-fg text-xs font-medium cursor-default hover:bg-app-surface-hover transition-colors"
+                title="Current Profile"
+              >
+                <span>{getProfileStyle(localStorage.getItem("ai_studio_active_profile_id") || "").emoji}</span>
+                <span className="truncate max-w-[100px]">{localStorage.getItem("ai_studio_active_profile_name") || "Profile"}</span>
+              </div>
+            )}
+            
             {/* Day 1 Memory Status Button */}
             <button
               onClick={() => setIsMemoryOpen(true)}

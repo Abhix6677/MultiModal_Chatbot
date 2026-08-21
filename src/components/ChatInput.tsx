@@ -61,23 +61,61 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [input]);
 
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const MAX = 1200;
+
+          if (width > height) {
+            if (width > MAX) {
+              height *= MAX / width;
+              width = MAX;
+            }
+          } else {
+            if (height > MAX) {
+              width *= MAX / height;
+              height = MAX;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(e.target!.result as string);
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          resolve(canvas.toDataURL("image/jpeg", 0.8));
+        };
+        img.onerror = () => resolve(e.target!.result as string);
+        img.src = e.target!.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const processFile = async (file: File) => {
     const fileId = "file_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
     
     if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setAttachedFiles(prev => [...prev, {
-            id: fileId,
-            type: "image",
-            dataUrl: e.target!.result as string,
-            mimeType: file.type || "image/jpeg",
-            fileName: file.name || "Pasted Image",
-          }]);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedDataUrl = await compressImage(file);
+        setAttachedFiles(prev => [...prev, {
+          id: fileId,
+          type: "image",
+          dataUrl: compressedDataUrl,
+          mimeType: "image/jpeg",
+          fileName: file.name || "Pasted Image",
+        }]);
+      } catch (e) {
+        console.error("Compression failed", e);
+      }
     } else if (file.name.endsWith(".zip") || file.type === "application/zip" || file.type === "application/x-zip-compressed") {
       try {
         const zip = new JSZip();
@@ -236,26 +274,39 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         <div className="relative rounded-2xl border bg-card shadow-sm transition-shadow duration-300 focus-within:shadow-md focus-within:ring-1 focus-within:ring-ring/50">
           {attachedFiles.length > 0 && (
-            <div className="flex w-full self-start flex-row gap-2 overflow-x-auto px-4 pt-4 no-scrollbar">
+            <div className="flex w-full self-start flex-row gap-2 overflow-x-auto px-4 pt-4 pb-1 no-scrollbar">
               {attachedFiles.map((file) => (
-                <div key={file.id} className="relative group shrink-0 w-16 h-16 rounded-xl border bg-accent/50 flex items-center justify-center overflow-hidden">
-                  {file.type === "image" ? (
-                    <img
-                      src={file.dataUrl}
-                      alt="Attachment Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : file.type === "zip" ? (
-                    <Archive className="w-6 h-6 text-muted-foreground" />
-                  ) : (
-                    <FileText className="w-6 h-6 text-muted-foreground" />
-                  )}
+                <div key={file.id} className="relative group shrink-0 h-14 max-w-[220px] rounded-2xl border border-border/40 bg-accent/40 hover:bg-accent/60 transition-colors flex items-center pr-10 pl-3 overflow-hidden shadow-sm">
+                  
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-accent border border-border/50 flex items-center justify-center mr-3 overflow-hidden">
+                    {file.type === "image" ? (
+                      <img
+                        src={file.dataUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : file.type === "zip" ? (
+                      <Archive className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-col justify-center min-w-0 py-1">
+                    <span className="text-[13px] font-medium text-foreground truncate leading-tight">
+                      {file.fileName || "Unnamed file"}
+                    </span>
+                    <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wider mt-0.5">
+                      {file.type === "zip" ? "ZIP ARCHIVE" : file.type === "image" ? "IMAGE" : "DOCUMENT"}
+                    </span>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => removeFile(file.id)}
-                    className="absolute -top-1 -right-1 p-1 bg-background/80 hover:bg-destructive hover:text-destructive-foreground rounded-full text-foreground opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm shadow-sm"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-background/80 backdrop-blur-sm shadow-sm border border-border/50 hover:bg-destructive hover:text-destructive-foreground hover:border-transparent rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 transition-all"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
