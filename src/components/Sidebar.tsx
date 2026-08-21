@@ -139,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         type="text"
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        className="bg-background px-2 py-0.5 rounded text-sm border focus:outline-none w-32"
+                        className="bg-background px-2 py-0.5 rounded text-[16px] border focus:outline-none w-32"
                         autoFocus
                       />
                       <button type="submit" className="text-primary p-0.5">
@@ -273,13 +273,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               placeholder="Search chats..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-background border rounded-md text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full pl-9 pr-3 py-1.5 bg-background border rounded-md text-[16px] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
         </div>
 
         {/* Conversation List */}
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto overscroll-none p-2">
           {filteredConversations.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No chats found.

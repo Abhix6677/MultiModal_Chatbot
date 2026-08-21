@@ -1685,7 +1685,7 @@ timestamp: ${new Date().toISOString()}`);
 
         const isAffectedReasoningModel = (modelName: string) => {
           const lower = modelName.toLowerCase();
-          return lower.includes("qwen") || lower.includes("deepseek") || lower.includes("reasoning") || lower.includes("think") || lower.includes("lorbus");
+          return lower.includes("qwen") || lower.includes("deepseek") || lower.includes("reasoning") || lower.includes("think") || lower.includes("lorbus") || lower.includes("cohere");
         };
         const shouldFilterReasoning = isAffectedReasoningModel(model);
         
@@ -1738,11 +1738,6 @@ timestamp: ${new Date().toISOString()}`);
                   continue;
                 }
                 let content = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.text || "";
-                
-                const reasoningContent = parsed.choices?.[0]?.delta?.reasoning_content;
-                if (reasoningContent) {
-                  content += `<think>${reasoningContent}</think>`;
-                }
                 
                 if (content && shouldFilterReasoning) {
                   let outputContent = "";

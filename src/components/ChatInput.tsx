@@ -325,7 +325,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 : "Ask anything..."
             }
             rows={1}
-            className="w-full min-h-[64px] max-h-48 resize-none bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 border-none"
+            className="w-full min-h-[64px] max-h-48 resize-none bg-transparent px-4 pt-4 pb-2 text-[16px] leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 border-none"
           />
 
           <div className="flex items-center justify-between px-3 pb-3">

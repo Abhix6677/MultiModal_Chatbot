@@ -742,14 +742,14 @@ export default function App() {
 
   if (!isDbLoaded) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-app-bg">
+      <div className="flex h-[100dvh] w-screen items-center justify-center bg-app-bg">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-screen bg-app-bg text-app-fg overflow-hidden font-sans antialiased">
+    <div className="flex h-[100dvh] w-screen bg-app-bg text-app-fg overflow-hidden font-sans antialiased">
       {/* Navigation Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -783,24 +783,24 @@ export default function App() {
       }`}>
         {/* Top Header Navigation */}
         <header className="h-14 px-4 bg-app-bg/90 border-b border-app-border backdrop-blur-md flex items-center justify-between shrink-0 z-10 shadow-xs">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 text-app-muted hover:text-app-fg hover:bg-app-surface-hover rounded-xl transition-colors"
+              className="p-2 text-app-muted hover:text-app-fg hover:bg-app-surface-hover rounded-xl transition-colors shrink-0"
               title="Toggle Sidebar"
             >
               {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
             </button>
 
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <h2 className="font-bold text-sm text-app-fg tracking-tight truncate max-w-[200px] sm:max-w-xs">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <h2 className="font-bold text-sm text-app-fg tracking-tight truncate sm:max-w-xs">
                 {currentConv?.title || "New Chat"}
               </h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Active Profile Indicator */}
             {localStorage.getItem("ai_studio_active_profile_id") && (
               <div 
@@ -844,7 +844,7 @@ export default function App() {
         </header>
 
         {/* Scrollable Area (Main + Footer) */}
-        <div id="chat-scroll-container" className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden relative">
+        <div id="chat-scroll-container" className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden overscroll-none relative">
           {/* Chat Thread Container */}
           <main className="flex-1 w-full relative">
             <GlobalSelectionPopover onQuote={(t, mId) => setQuotedText({ text: t, messageId: mId })} scrollContainerId="chat-scroll-container" />
@@ -922,7 +922,7 @@ export default function App() {
         </main>
 
         {/* Bottom Floating Prompt Footer */}
-                <footer className="sticky bottom-0 shrink-0 bg-app-bg/90 backdrop-blur-md pt-1 pb-2 z-50">
+        <footer className="sticky bottom-0 shrink-0 bg-app-bg/90 backdrop-blur-md pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] z-20">
           {isStreaming && import.meta.env.VITE_SMARTLINK_AD_URL && (
             <div className="flex justify-center mb-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <a 
